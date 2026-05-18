@@ -4,7 +4,7 @@
   "description": "GymOS API — Express + DynamoDB + JWT",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=18.17" },
+  "engines": { "node": "18.19.1" },
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
