@@ -44,18 +44,21 @@ app.use(helmet({
 }));
 
 // ── CORS con whitelist
-app.use(cors({
+const corsOptions = {
   origin(origin, cb) {
-    if (!origin) return cb(null, true); // tools como curl
+    if (!origin) return cb(null, true); // tools como curl/postman sin Origin
     if (env.CORS_ORIGIN_LIST.includes(origin)) return cb(null, true);
-    return cb(new Error('Origen no permitido por CORS'));
+    return cb(new Error(`Origen no permitido por CORS: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Request-Id'],
   exposedHeaders: ['X-Request-Id'],
   maxAge: 600,
-}));
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(compression());
 app.use(express.json({ limit: env.JSON_BODY_LIMIT }));
