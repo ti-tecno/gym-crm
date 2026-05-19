@@ -18,8 +18,8 @@ const schema = z.object({
   JWT_PUBLIC_KEY_PATH: z.string(),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
-  JWT_ISSUER: z.string().default('gymos-api'),
-  JWT_AUDIENCE: z.string().default('gymos-web'),
+  JWT_ISSUER: z.string().default('ironcore-api'),
+  JWT_AUDIENCE: z.string().default('ironcore-web'),
 
   COOKIE_SECURE: z.coerce.boolean().default(false),
   COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('strict'),

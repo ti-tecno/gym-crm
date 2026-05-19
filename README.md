@@ -1,4 +1,4 @@
-# GymOS — Sistema de Gestión de Gimnasio
+# IronCore — Sistema de Gestión de Gimnasio
 
 Monorepo con frontend en **React (Vite)** y backend en **Node.js (Express + AWS DynamoDB)**.
 Diseño industrial oscuro con acento naranja-dorado, basado en `gym-system.jsx`.
@@ -43,9 +43,9 @@ npm run dev                 # arranca en http://localhost:5173
 
 | Usuario             | Password      | Rol     | Portal             |
 |---------------------|---------------|---------|--------------------|
-| admin@gymos.mx      | `Admin#2026`  | ADMIN   | Staff (`/dashboard`)|
-| coach@gymos.mx      | `Coach#2026`  | COACH   | Staff (`/dashboard`)|
-| recepcion@gymos.mx  | `Recep#2026`  | RECEP   | Staff (`/dashboard`)|
+| admin@ironcore.mx      | `Admin#2026`  | ADMIN   | Staff (`/dashboard`)|
+| coach@ironcore.mx      | `Coach#2026`  | COACH   | Staff (`/dashboard`)|
+| recepcion@ironcore.mx  | `Recep#2026`  | RECEP   | Staff (`/dashboard`)|
 | carlos@email.com    | `Cliente#2026`| CLIENTE | Cliente (`/mi/resumen`)|
 
 > Los nuevos clientes también pueden **auto-registrarse** desde la pantalla de Login → pestaña "Crear cuenta".

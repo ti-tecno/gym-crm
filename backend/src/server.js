@@ -7,7 +7,7 @@ const server = http.createServer(app);
 server.setTimeout(env.REQUEST_TIMEOUT_MS);
 
 server.listen(env.PORT, () => {
-  logger.info(`GymOS API escuchando en http://localhost:${env.PORT}${env.API_PREFIX}`);
+  logger.info(`IronCore API escuchando en http://localhost:${env.PORT}${env.API_PREFIX}`);
 });
 
 function shutdown(signal) {

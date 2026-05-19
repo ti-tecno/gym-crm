@@ -1,4 +1,4 @@
-# Lista de verificación de seguridad — GymOS
+# Lista de verificación de seguridad — IronCore
 
 Antes de desplegar a producción cada item debe estar marcado.
 

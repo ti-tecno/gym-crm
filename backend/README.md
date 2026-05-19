@@ -1,6 +1,6 @@
-# GymOS — Backend (Express + DynamoDB)
+# IronCore — Backend (Express + DynamoDB)
 
-API REST que sirve al frontend React. Stack: Node 18.19.1, Express, AWS SDK v3 para DynamoDB,
+API REST que sirve al frontend React. Stack: Node 20+, Express, AWS SDK v3 para DynamoDB,
 JWT RS256, Helmet, Zod, Winston.
 
 ## Setup

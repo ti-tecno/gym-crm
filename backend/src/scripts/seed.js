@@ -11,9 +11,9 @@ async function put(table, item) {
 
 async function seedUsers(clienteIds = {}) {
   const users = [
-    { email: 'admin@gymos.mx',     nombre: 'Administrador',  rol: 'ADMIN', password: 'Admin#2026' },
-    { email: 'coach@gymos.mx',     nombre: 'Marcos Herrera', rol: 'COACH', password: 'Coach#2026' },
-    { email: 'recepcion@gymos.mx', nombre: 'Patricia Ruiz',  rol: 'RECEP', password: 'Recep#2026' },
+    { email: 'admin@ironcore.mx',     nombre: 'Administrador',  rol: 'ADMIN', password: 'Admin#2026' },
+    { email: 'coach@ironcore.mx',     nombre: 'Marcos Herrera', rol: 'COACH', password: 'Coach#2026' },
+    { email: 'recepcion@ironcore.mx', nombre: 'Patricia Ruiz',  rol: 'RECEP', password: 'Recep#2026' },
     // Cliente demo vinculado al cliente "Carlos Mendoza"
     { email: 'carlos@email.com',   nombre: 'Carlos Mendoza', rol: 'CLIENTE', password: 'Cliente#2026',
       clienteId: clienteIds['carlos@email.com'] },
