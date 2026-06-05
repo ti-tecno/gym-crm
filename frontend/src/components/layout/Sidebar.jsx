@@ -22,7 +22,7 @@ export default function Sidebar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 32, height: 32, background: COLORS.accent, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, color: '#000' }}>G</div>
           <div>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 800, color: COLORS.text, lineHeight: 1 }}>GymOS</div>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 800, color: COLORS.text, lineHeight: 1 }}>IronCore</div>
             <div style={{ fontSize: 10, color: COLORS.muted, letterSpacing: 1 }}>GESTIÓN v2.2</div>
           </div>
         </div>

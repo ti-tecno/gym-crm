@@ -1,4 +1,4 @@
-# GymOS — Frontend (React + Vite)
+# IronCore — Frontend (React + Vite)
 
 SPA en React (JSX) que consume la API DynamoDB-backed del backend.
 
@@ -19,7 +19,7 @@ npm run preview            # sirve /dist para QA
 | Variable        | Descripción                          | Ejemplo                         |
 |-----------------|--------------------------------------|---------------------------------|
 | `VITE_API_URL`  | URL base de la API                   | `http://localhost:4000/api/v1`  |
-| `VITE_APP_NAME` | Nombre mostrado en la UI             | `GymOS`                         |
+| `VITE_APP_NAME` | Nombre mostrado en la UI             | `IronCore`                         |
 
 ## Estructura
 

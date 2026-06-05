@@ -34,7 +34,7 @@ export default function Dashboard() {
           Sistema de Gestión
         </div>
         <h1 style={{ margin: 0, color: COLORS.text, fontSize: 46, fontFamily: "'Barlow Condensed',sans-serif", fontWeight: 800, letterSpacing: -1 }}>
-          Panel de Control <span style={{ color: COLORS.accent }}>GymOS</span>
+          Panel de Control <span style={{ color: COLORS.accent }}>IronCore</span>
         </h1>
         <p style={{ color: COLORS.muted, margin: '6px 0 0', fontSize: 14 }}>Resumen general</p>
       </div>

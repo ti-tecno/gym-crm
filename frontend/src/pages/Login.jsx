@@ -121,7 +121,7 @@ export default function Login() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
           <div style={{ width: 40, height: 40, background: COLORS.accent, borderRadius: 10, display: 'grid', placeItems: 'center', fontSize: 20, fontWeight: 800, color: '#000' }}>G</div>
           <div>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 24, fontWeight: 800 }}>GymOS</div>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 24, fontWeight: 800 }}>IronCore</div>
             <div style={{ color: COLORS.muted, fontSize: 11, letterSpacing: 2 }}>
               {mode === 'login' ? 'INICIAR SESIÓN' : 'CREAR CUENTA DE CLIENTE'}
             </div>
@@ -149,7 +149,7 @@ export default function Login() {
         {mode === 'login' && (
           <form onSubmit={loginForm.handleSubmit(onLogin)} noValidate>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <FInput label="Email"      placeholder="correo@gymos.mx" type="email"    {...loginForm.register('email')}    error={loginForm.formState.errors.email?.message} />
+              <FInput label="Email"      placeholder="correo@ironcore.mx" type="email"    {...loginForm.register('email')}    error={loginForm.formState.errors.email?.message} />
               <FInput label="Contraseña" placeholder="••••••••"        type="password" {...loginForm.register('password')} error={loginForm.formState.errors.password?.message} />
             </div>
             {serverError && (
@@ -168,7 +168,7 @@ export default function Login() {
               {loginForm.formState.isSubmitting ? 'Entrando…' : 'Entrar'}
             </button>
             <div style={{ marginTop: 14, fontSize: 11, color: COLORS.muted, lineHeight: 1.7 }}>
-              Demos: <code>admin@gymos.mx / Admin#2026</code> · <code>carlos@email.com / Cliente#2026</code>
+              Demos: <code>admin@ironcore.mx / Admin#2026</code> · <code>carlos@email.com / Cliente#2026</code>
             </div>
           </form>
         )}

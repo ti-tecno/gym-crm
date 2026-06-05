@@ -12,14 +12,17 @@ const schema = z.object({
   REQUEST_TIMEOUT_MS: z.coerce.number().default(30_000),
   JSON_BODY_LIMIT: z.string().default('100kb'),
 
+  TLS_KEY_PATH: z.string().optional(),
+  TLS_CERT_PATH: z.string().optional(),
+
   CORS_ORIGINS: z.string().default('http://localhost:5173'),
 
   JWT_PRIVATE_KEY_PATH: z.string(),
   JWT_PUBLIC_KEY_PATH: z.string(),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
-  JWT_ISSUER: z.string().default('gymos-api'),
-  JWT_AUDIENCE: z.string().default('gymos-web'),
+  JWT_ISSUER: z.string().default('ironcore-api'),
+  JWT_AUDIENCE: z.string().default('ironcore-web'),
 
   COOKIE_SECURE: z.coerce.boolean().default(false),
   COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('strict'),

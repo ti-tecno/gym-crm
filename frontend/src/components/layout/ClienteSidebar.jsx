@@ -18,7 +18,7 @@ export default function ClienteSidebar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 32, height: 32, background: COLORS.green, borderRadius: 8, display: 'grid', placeItems: 'center', fontSize: 16, fontWeight: 800, color: '#000' }}>♥</div>
           <div>
-            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 800, color: COLORS.text, lineHeight: 1 }}>Mi GymOS</div>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: 20, fontWeight: 800, color: COLORS.text, lineHeight: 1 }}>Mi IronCore</div>
             <div style={{ fontSize: 10, color: COLORS.muted, letterSpacing: 1 }}>PORTAL CLIENTE</div>
           </div>
         </div>
