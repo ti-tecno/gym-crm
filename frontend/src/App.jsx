@@ -6,6 +6,7 @@ import { ROLES, STAFF_ROLES } from './constants/theme.js';
 import { useAuth } from './context/AuthContext.jsx';
 
 import Login from './pages/Login.jsx';
+import LandingPage from './pages/LandingPage.jsx';
 
 // Staff
 import Dashboard from './pages/Dashboard.jsx';
@@ -23,11 +24,11 @@ import Diario from './pages/Cliente/Diario.jsx';
 import Medidas from './pages/Cliente/Medidas.jsx';
 import Progreso from './pages/Cliente/Progreso.jsx';
 
-/** Redirige el root según el rol del usuario autenticado. */
+/** Muestra el landing si no hay sesión; redirige al portal según rol si ya está autenticado. */
 function HomeRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <LandingPage />;
   return <Navigate to={user.rol === ROLES.CLIENTE ? '/mi/resumen' : '/dashboard'} replace />;
 }
 
