@@ -12,6 +12,9 @@ const schema = z.object({
   REQUEST_TIMEOUT_MS: z.coerce.number().default(30_000),
   JSON_BODY_LIMIT: z.string().default('100kb'),
 
+  TLS_KEY_PATH: z.string().optional(),
+  TLS_CERT_PATH: z.string().optional(),
+
   CORS_ORIGINS: z.string().default('http://localhost:5173'),
 
   JWT_PRIVATE_KEY_PATH: z.string(),

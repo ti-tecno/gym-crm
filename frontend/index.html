@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GymOS — Gestión</title>
+  <title>IronCore — Gestión</title>
 
   <!-- CSP estricta. En producción, mejor servirla como header HTTP desde el backend/CDN. -->
   <meta http-equiv="Content-Security-Policy"
@@ -12,8 +12,7 @@
                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
                  font-src 'self' https://fonts.gstatic.com;
                  img-src 'self' data:;
-                 connect-src 'self' http://localhost:4000;
-                 frame-ancestors 'none';
+                 connect-src 'self' https://api.eventopolis.com.mx:4000 http://localhost:4000;
                  base-uri 'self';
                  form-action 'self'" />
   <meta name="referrer" content="strict-origin-when-cross-origin" />

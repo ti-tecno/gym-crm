@@ -126,7 +126,7 @@ export default function PagoEnLinea() {
                 ['Banco', 'BBVA México'],
                 ['CLABE', '012 320 0123456789 01'],
                 ['Referencia', 'GYM-' + (cliente?.clienteId?.slice(0, 6) || '------')],
-                ['Beneficiario', 'GymOS S.A. de C.V.'],
+                ['Beneficiario', 'IronCore S.A. de C.V.'],
               ].map(([k, v]) => (
                 <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: `1px solid ${COLORS.border}` }}>
                   <span style={{ color: COLORS.muted, fontSize: 13 }}>{k}</span>

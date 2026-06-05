@@ -1,13 +1,39 @@
 import http from 'node:http';
+import https from 'node:https';
+import fs from 'node:fs';
+import path from 'node:path';
 import app from './app.js';
 import env from './config/env.js';
 import logger from './config/logger.js';
 
-const server = http.createServer(app);
+function resolveIfExists(filePath) {
+  if (!filePath) return null;
+  const abs = path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
+  return fs.existsSync(abs) ? abs : null;
+}
+
+const keyPath = resolveIfExists(env.TLS_KEY_PATH);
+const certPath = resolveIfExists(env.TLS_CERT_PATH);
+
+const server = (keyPath && certPath)
+  ? https.createServer(
+      {
+        key: fs.readFileSync(keyPath, 'utf8'),
+        cert: fs.readFileSync(certPath, 'utf8'),
+      },
+      app,
+    )
+  : http.createServer(app);
+
 server.setTimeout(env.REQUEST_TIMEOUT_MS);
 
+if (!keyPath || !certPath) {
+  logger.warn('TLS no configurado (TLS_KEY_PATH/TLS_CERT_PATH). Iniciando en HTTP.');
+}
+
 server.listen(env.PORT, () => {
-  logger.info(`IronCore API escuchando en http://localhost:${env.PORT}${env.API_PREFIX}`);
+  const protocol = keyPath && certPath ? 'https' : 'http';
+  logger.info(`IronCore API escuchando en ${protocol}://localhost:${env.PORT}${env.API_PREFIX}`);
 });
 
 function shutdown(signal) {

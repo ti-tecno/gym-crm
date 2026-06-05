@@ -1,0 +1,4 @@
+- [x] Agregar variables TLS opcionales en `backend/src/config/env.js`.
+- [x] Actualizar `backend/src/server.js` para levantar HTTPS cuando existan cert/key.
+- [x] Mantener fallback HTTP cuando no existan cert/key.
+- [x] Marcar tareas completadas.
