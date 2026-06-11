@@ -1,17 +1,17 @@
 export const COLORS = {
-  bg: '#0A0B0E',
-  surface: '#12141A',
-  card: '#1A1D26',
-  border: '#252836',
-  accent: '#F5A623',
-  accentDim: '#c47e0f',
+  bg: '#030202',
+  surface: '#0E0C0C',
+  card: '#151212',
+  border: '#2A2425',
+  accent: '#CF1B36',
+  accentDim: '#A3172D',
   green: '#2ECC71',
   red: '#E74C3C',
   blue: '#4A90D9',
   purple: '#9B59B6',
-  text: '#EAEDF3',
-  muted: '#6B7280',
-  subtle: '#9CA3AF',
+  text: '#F4F2F2',
+  muted: '#A09FA0',
+  subtle: '#A09FA0',
 };
 
 export const NAV_ITEMS = [
@@ -21,6 +21,7 @@ export const NAV_ITEMS = [
   { id: 'nomina',     to: '/nomina',              icon: '◎', label: 'Nómina' },
   { id: 'rutinas',    to: '/rutinas/clientes',    icon: '◷', label: 'Rutinas Clientes' },
   { id: 'coach',      to: '/rutinas/coach',       icon: '◐', label: 'Rutinas Coach' },
+  { id: 'contenido',  to: '/admin/contenido',     icon: '⚙', label: 'Backoffice Contenido', adminOnly: true },
 ];
 
 export const ROLES = { ADMIN: 'ADMIN', COACH: 'COACH', RECEP: 'RECEP', CLIENTE: 'CLIENTE' };

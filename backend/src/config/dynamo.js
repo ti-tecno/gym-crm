@@ -32,6 +32,7 @@ export const TABLES = {
   RUTINAS_CLIENTES: `${env.DYNAMODB_TABLE_PREFIX}rutinas_clientes`,
   RUTINAS_COACH: `${env.DYNAMODB_TABLE_PREFIX}rutinas_coach`,
   RECORDATORIOS: `${env.DYNAMODB_TABLE_PREFIX}recordatorios`,
+  SETTINGS: `${env.DYNAMODB_TABLE_PREFIX}settings`,
   REFRESH_TOKENS: `${env.DYNAMODB_TABLE_PREFIX}refresh_tokens`,
   LOGIN_ATTEMPTS: `${env.DYNAMODB_TABLE_PREFIX}login_attempts`,
   // Portal CLIENTE — progreso

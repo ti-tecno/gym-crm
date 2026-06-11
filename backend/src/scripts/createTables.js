@@ -90,6 +90,12 @@ const tableDefs = [
     AttributeDefinitions: [{ AttributeName: 'recordatorioId', AttributeType: 'S' }],
     ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
+  {
+    TableName: TABLES.SETTINGS,
+    KeySchema: [{ AttributeName: 'settingsId', KeyType: 'HASH' }],
+    AttributeDefinitions: [{ AttributeName: 'settingsId', AttributeType: 'S' }],
+    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
+  },
   // ── Portal CLIENTE: progreso ──
   {
     TableName: TABLES.WORKOUTS,
