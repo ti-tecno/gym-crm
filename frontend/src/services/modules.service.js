@@ -42,3 +42,11 @@ export const recordatoriosService = {
   create: (body)        => api.post('/recordatorios', body).then(r => r.data),
   update: (id, body)    => api.put(`/recordatorios/${id}`, body).then(r => r.data),
 };
+
+export const settingsService = {
+  public:         ()            => api.get('/settings/public').then(r => r.data),
+  admin:          ()            => api.get('/settings/admin').then(r => r.data),
+  updatePackages: (packages)    => api.put('/settings/admin/packages', { packages }).then(r => r.data),
+  updateSchedule: (schedule)    => api.put('/settings/admin/schedule', { schedule }).then(r => r.data),
+  updateCalendar: (calendar)    => api.put('/settings/admin/calendar', { calendar }).then(r => r.data),
+};

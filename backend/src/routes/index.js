@@ -7,6 +7,7 @@ import inventarioRoutes from './inventario.routes.js';
 import nominaRoutes from './nomina.routes.js';
 import rutinasRoutes from './rutinas.routes.js';
 import recordatoriosRoutes from './recordatorios.routes.js';
+import settingsRoutes from './settings.routes.js';
 import clienteRoutes from './cliente.routes.js';
 
 const router = Router();
@@ -19,6 +20,7 @@ router.use('/inventario', inventarioRoutes);
 router.use('/nomina', nominaRoutes);
 router.use('/rutinas', rutinasRoutes);
 router.use('/recordatorios', recordatoriosRoutes);
+router.use('/settings', settingsRoutes);
 router.use('/cliente', clienteRoutes);     // portal de auto-servicio para CLIENTE
 
 export default router;
