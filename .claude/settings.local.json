@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(Get-ChildItem -Path \"C:\\\\workspace\\\\react\\\\SofIA\\\\gym-crm\" -Force)",
-      "Bash(Select-Object Name, PSIsContainer)"
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\adri\\\\Documents\\\\GitHub\\\\gym-crm\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\adri\\\\Documents\\\\GitHub\\\\gym-crm\\\\backend\\\\src\\\\config\" -Filter \"dynamo.js\")",
+      "Bash(Select-Object FullName)"
     ]
   }
 }

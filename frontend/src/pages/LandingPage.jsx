@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { COLORS } from "../constants/theme.js";
+import { settingsService } from "../services/modules.service.js";
 
 /*
  * ═══════════════════════════════════════════════════════════════
@@ -185,6 +186,26 @@ export default function LandingPage() {
   const [imgErrors, setImgErrors] = useState({});
   const [menuOpen, setMenuOpen] = useState(false);
   const [coachIndex, setCoachIndex] = useState(0);
+
+  const [plans, setPlans] = useState(PLANS);
+  const [sched, setSched] = useState({
+    days: DAYS,
+    slots: SCHEDULE_SLOTS,
+    classColors: CLASS_COLORS,
+  });
+
+  useEffect(() => {
+    settingsService.public().then((data) => {
+      if (Array.isArray(data.packages) && data.packages.length > 0)
+        setPlans(data.packages);
+      if (data.schedule?.days?.length && data.schedule?.slots?.length)
+        setSched({
+          days: data.schedule.days,
+          slots: data.schedule.slots,
+          classColors: data.schedule.classColors || CLASS_COLORS,
+        });
+    }).catch(() => {/* fallback to hardcoded defaults */});
+  }, []);
 
   // ── Inject keyframe CSS ──────────────────────────────────────
   useEffect(() => {
@@ -1742,7 +1763,7 @@ export default function LandingPage() {
                       borderRadius: 8,
                     }}
                   />
-                  {DAYS.map((day) => (
+                  {sched.days.map((day) => (
                     <th
                       key={day}
                       style={{
@@ -1763,7 +1784,7 @@ export default function LandingPage() {
                 </tr>
               </thead>
               <tbody>
-                {SCHEDULE_SLOTS.map((slot, ri) => (
+                {sched.slots.map((slot, ri) => (
                   <tr key={ri}>
                     {/* Time */}
                     <td
@@ -1796,7 +1817,7 @@ export default function LandingPage() {
                         {cls ? (
                           <div
                             style={{
-                              background: CLASS_COLORS[cls] ?? COLORS.card,
+                              background: sched.classColors[cls] ?? COLORS.card,
                               borderRadius: 8,
                               padding: "14px 8px",
                               textAlign: "center",
@@ -1807,7 +1828,7 @@ export default function LandingPage() {
                               color: "#fff",
                               textTransform: "uppercase",
                               whiteSpace: "nowrap",
-                              boxShadow: `0 4px 14px ${CLASS_COLORS[cls] ?? "#000"}55`,
+                              boxShadow: `0 4px 14px ${sched.classColors[cls] ?? "#000"}55`,
                             }}
                           >
                             {cls}
@@ -1841,7 +1862,7 @@ export default function LandingPage() {
               justifyContent: "center",
             }}
           >
-            {Object.entries(CLASS_COLORS).map(([name, color]) => (
+            {Object.entries(sched.classColors).map(([name, color]) => (
               <div
                 key={name}
                 style={{
@@ -1927,7 +1948,7 @@ export default function LandingPage() {
               alignItems: "start",
             }}
           >
-            {PLANS.map((plan, i) => (
+            {plans.map((plan, i) => (
               <div
                 key={i}
                 className="ic-plan-card ic-reveal"
@@ -2017,7 +2038,7 @@ export default function LandingPage() {
                       {plan.precio}
                     </span>
                     <span style={{ color: COLORS.muted, fontSize: 13 }}>
-                      /mes
+                      /{plan.periodo ?? "mes"}
                     </span>
                   </div>
                 </div>
