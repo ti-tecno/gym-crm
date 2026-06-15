@@ -4,6 +4,14 @@ import TabBar from "../components/ui/TabBar.jsx";
 import { COLORS } from "../constants/theme.js";
 import { settingsService } from "../services/modules.service.js";
 
+function hexToRgba(hex, alpha) {
+  const h = (hex || "#4A90D9").replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 const TABS = [
   { id: "packages", icon: "💳", label: "Paquetes" },
   { id: "schedule", icon: "🗓", label: "Horarios" },
@@ -149,10 +157,94 @@ export default function BackofficeContenido() {
     })();
   }, []);
 
+  const [newClass, setNewClass] = useState({ name: "", color: "#4A90D9" });
+  const [addingClass, setAddingClass] = useState(false);
+
   const classNames = useMemo(
     () => Object.keys(schedule?.classColors || {}),
     [schedule],
   );
+
+  function addClassType() {
+    const name = newClass.name.trim().toUpperCase();
+    if (!name || schedule.classColors[name]) return;
+    setSchedule((prev) => ({
+      ...prev,
+      classColors: { ...prev.classColors, [name]: newClass.color },
+    }));
+    setNewClass({ name: "", color: "#4A90D9" });
+    setAddingClass(false);
+  }
+
+  function removeClassType(name) {
+    setSchedule((prev) => ({
+      ...prev,
+      classColors: Object.fromEntries(
+        Object.entries(prev.classColors).filter(([k]) => k !== name),
+      ),
+      slots: prev.slots.map((s) => ({
+        ...s,
+        classes: s.classes.map((c) => (c === name ? null : c)),
+      })),
+    }));
+  }
+
+  function updateClassColor(name, color) {
+    setSchedule((prev) => ({
+      ...prev,
+      classColors: { ...prev.classColors, [name]: color },
+    }));
+  }
+
+  function addSlot() {
+    setSchedule((prev) => ({
+      ...prev,
+      slots: [
+        ...prev.slots,
+        { time: "", classes: (prev.days || []).map(() => null) },
+      ],
+    }));
+  }
+
+  function removeSlot(ri) {
+    setSchedule((prev) => ({
+      ...prev,
+      slots: prev.slots.filter((_, idx) => idx !== ri),
+    }));
+  }
+
+  function setCell(ri, ci, value) {
+    setSchedule((prev) => ({
+      ...prev,
+      slots: prev.slots.map((s, idx) =>
+        idx === ri
+          ? {
+              ...s,
+              classes: s.classes.map((c, cidx) =>
+                cidx === ci ? value || null : c,
+              ),
+            }
+          : s,
+      ),
+    }));
+  }
+
+  function setSlotTime(ri, value) {
+    setSchedule((prev) => ({
+      ...prev,
+      slots: prev.slots.map((s, idx) =>
+        idx === ri ? { ...s, time: value } : s,
+      ),
+    }));
+  }
+
+  function setDayName(di, value) {
+    setSchedule((prev) => {
+      const days = [...prev.days];
+      days[di] = value;
+      return { ...prev, days };
+    });
+  }
 
   const savePackages = async () => {
     setSaving(true);
@@ -395,97 +487,268 @@ export default function BackofficeContenido() {
       )}
 
       {tab === "schedule" && (
-        <Card
-          title="Horarios de clases"
-          right={
-            <button
-              onClick={saveSchedule}
-              disabled={saving}
-              style={{
-                background: COLORS.accent,
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "8px 12px",
-                cursor: "pointer",
-              }}
-            >
-              {saving ? "Guardando…" : "Guardar horarios"}
-            </button>
-          }
-        >
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "separate",
-                borderSpacing: 6,
-                minWidth: 760,
-              }}
-            >
-              <thead>
-                <tr>
-                  <th style={{ color: COLORS.muted }}>Hora</th>
-                  {(schedule.days || []).map((d, di) => (
-                    <th key={di} style={{ color: COLORS.muted }}>
-                      {d}
+        <>
+          {/* ── Class type manager ───────────────────────────── */}
+          <Card title="Tipos de clase">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+              {Object.entries(schedule.classColors || {}).map(([name, color]) => (
+                <div
+                  key={name}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: hexToRgba(color, 0.12),
+                    border: `1px solid ${hexToRgba(color, 0.5)}`,
+                    borderRadius: 8,
+                    padding: "5px 10px",
+                  }}
+                >
+                  <input
+                    type="color"
+                    value={color}
+                    title="Cambiar color"
+                    onChange={(e) => updateClassColor(name, e.target.value)}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      border: "none",
+                      padding: 0,
+                      borderRadius: 4,
+                      cursor: "pointer",
+                      background: "none",
+                    }}
+                  />
+                  <span style={{ color, fontSize: 12, fontWeight: 700, letterSpacing: 0.5 }}>
+                    {name}
+                  </span>
+                  <button
+                    onClick={() => removeClassType(name)}
+                    title="Eliminar clase"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: COLORS.muted,
+                      cursor: "pointer",
+                      fontSize: 13,
+                      lineHeight: 1,
+                      padding: "0 2px",
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+
+              {addingClass ? (
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input
+                    value={newClass.name}
+                    onChange={(e) =>
+                      setNewClass((p) => ({ ...p, name: e.target.value }))
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && addClassType()}
+                    placeholder="Nombre"
+                    autoFocus
+                    style={{ width: 120 }}
+                  />
+                  <input
+                    type="color"
+                    value={newClass.color}
+                    onChange={(e) =>
+                      setNewClass((p) => ({ ...p, color: e.target.value }))
+                    }
+                    style={{ width: 32, height: 32, border: "none", padding: 0, cursor: "pointer", borderRadius: 6 }}
+                  />
+                  <button
+                    onClick={addClassType}
+                    style={{
+                      background: COLORS.accent,
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "5px 12px",
+                      cursor: "pointer",
+                      fontSize: 13,
+                    }}
+                  >
+                    Agregar
+                  </button>
+                  <button
+                    onClick={() => setAddingClass(false)}
+                    style={{ background: "none", border: "none", color: COLORS.muted, cursor: "pointer", fontSize: 13 }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAddingClass(true)}
+                  style={{
+                    background: "transparent",
+                    color: COLORS.accent,
+                    border: `1px dashed ${COLORS.accent}`,
+                    borderRadius: 8,
+                    padding: "5px 12px",
+                    cursor: "pointer",
+                    fontSize: 12,
+                  }}
+                >
+                  + Nueva clase
+                </button>
+              )}
+            </div>
+          </Card>
+
+          {/* ── Schedule grid ────────────────────────────────── */}
+          <Card
+            title="Cuadrícula de horarios"
+            right={
+              <button
+                onClick={saveSchedule}
+                disabled={saving}
+                style={{
+                  background: COLORS.accent,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "8px 14px",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                {saving ? "Guardando…" : "Guardar horarios"}
+              </button>
+            }
+          >
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "separate",
+                  borderSpacing: 5,
+                  minWidth: 700,
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th style={{ color: COLORS.muted, fontSize: 12, paddingBottom: 6, width: 140 }}>
+                      Hora
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(schedule.slots || []).map((slot, ri) => (
-                  <tr key={ri}>
-                    <td>
-                      <input
-                        value={slot.time || ""}
-                        onChange={(e) =>
-                          setSchedule((prev) => ({
-                            ...prev,
-                            slots: prev.slots.map((s, idx) =>
-                              idx === ri ? { ...s, time: e.target.value } : s,
-                            ),
-                          }))
-                        }
-                      />
-                    </td>
-                    {(slot.classes || []).map((cls, ci) => (
-                      <td key={ci}>
-                        <select
-                          value={cls || ""}
-                          onChange={(e) =>
-                            setSchedule((prev) => ({
-                              ...prev,
-                              slots: prev.slots.map((s, idx) =>
-                                idx === ri
-                                  ? {
-                                      ...s,
-                                      classes: s.classes.map((c, cidx) =>
-                                        cidx === ci
-                                          ? e.target.value || null
-                                          : c,
-                                      ),
-                                    }
-                                  : s,
-                              ),
-                            }))
-                          }
-                        >
-                          <option value="">(vacío)</option>
-                          {classNames.map((cn) => (
-                            <option key={cn} value={cn}>
-                              {cn}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
+                    {(schedule.days || []).map((d, di) => (
+                      <th key={di} style={{ paddingBottom: 6 }}>
+                        <input
+                          value={d}
+                          onChange={(e) => setDayName(di, e.target.value)}
+                          style={{
+                            width: "100%",
+                            textAlign: "center",
+                            fontWeight: 700,
+                            fontSize: 11,
+                            letterSpacing: 0.5,
+                            color: COLORS.text,
+                            background: COLORS.surface,
+                            border: `1px solid ${COLORS.border}`,
+                            borderRadius: 6,
+                            padding: "4px 2px",
+                          }}
+                        />
+                      </th>
                     ))}
+                    <th style={{ width: 32 }} />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                </thead>
+                <tbody>
+                  {(schedule.slots || []).map((slot, ri) => (
+                    <tr key={ri}>
+                      <td>
+                        <input
+                          value={slot.time || ""}
+                          onChange={(e) => setSlotTime(ri, e.target.value)}
+                          placeholder="ej. 9:00 – 9:50 a.m."
+                          style={{
+                            width: "100%",
+                            fontSize: 12,
+                            color: COLORS.muted,
+                            background: COLORS.surface,
+                            border: `1px solid ${COLORS.border}`,
+                            borderRadius: 6,
+                            padding: "6px 8px",
+                          }}
+                        />
+                      </td>
+                      {(schedule.days || []).map((_, ci) => {
+                        const cls = (slot.classes || [])[ci] ?? null;
+                        const color = cls ? schedule.classColors[cls] : null;
+                        return (
+                          <td key={ci}>
+                            <select
+                              value={cls || ""}
+                              onChange={(e) => setCell(ri, ci, e.target.value)}
+                              style={{
+                                width: "100%",
+                                background: color
+                                  ? hexToRgba(color, 0.18)
+                                  : COLORS.surface,
+                                color: color || COLORS.muted,
+                                border: `1px solid ${color ? hexToRgba(color, 0.55) : COLORS.border}`,
+                                borderRadius: 6,
+                                padding: "6px 4px",
+                                fontSize: 11,
+                                fontWeight: cls ? 700 : 400,
+                                cursor: "pointer",
+                              }}
+                            >
+                              <option value="">—</option>
+                              {classNames.map((cn) => (
+                                <option key={cn} value={cn}>
+                                  {cn}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        );
+                      })}
+                      <td style={{ textAlign: "center" }}>
+                        <button
+                          onClick={() => removeSlot(ri)}
+                          title="Eliminar fila"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: COLORS.muted,
+                            cursor: "pointer",
+                            fontSize: 16,
+                            lineHeight: 1,
+                            padding: 2,
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <button
+              onClick={addSlot}
+              style={{
+                marginTop: 10,
+                background: "transparent",
+                color: COLORS.accent,
+                border: `1px dashed ${COLORS.accent}`,
+                borderRadius: 8,
+                padding: "6px 14px",
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              + Agregar franja horaria
+            </button>
+          </Card>
+        </>
       )}
     </div>
   );

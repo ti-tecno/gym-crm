@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 IronCore is a gym management system: a monorepo with a Node.js/Express backend (AWS DynamoDB) and a React/Vite frontend. It provides staff dashboards (admin, coaches, receptionists) and a separate client portal for gym members.
 
 **Tech Stack:**
-- **Backend**: Node.js 20+, Express, AWS DynamoDB (or DynamoDB Local), JWT RS256, Zod, Helmet, Winston
-- **Frontend**: React 18.3, Vite 5, React Router DOM, React Hook Form, Zod, DOMPurify, Axios
-- **Auth**: RS256 asymmetric JWT; access token (15 min) + refresh token (7 days, httpOnly cookie)
+- **Backend**: Node.js 20+, Express, AWS DynamoDB (or DynamoDB Local), JWT RS256, Zod, Helmet, Winston; uses ES modules (`"type": "module"`)
+- **Frontend**: React 18.3, Vite 5, React Router DOM, React Hook Form, Zod, DOMPurify, Axios; uses ES modules
+- **Auth**: RS256 asymmetric JWT; access token (15 min) + refresh token (7 days, httpOnly cookie, rotated on every refresh)
 - **RBAC Roles**: `ADMIN`, `COACH`, `RECEP` (staff portals), `CLIENTE` (member portal)
 
 ## Quick Start
@@ -59,39 +59,51 @@ Clients can self-register via Login → "Crear cuenta" tab.
 ### Backend (`backend/src/`)
 
 ```
-config/          env.js (Zod env validation), dynamo.js (DDB client), logger.js (Winston)
-middleware/      auth.js (JWT + RBAC), errorHandler, rateLimiter, validate (Zod)
+config/          env.js (Zod env validation), dynamo.js (DDB client + TABLES constant), logger.js (Winston)
+middleware/      auth.js (JWT + RBAC + CSRF), errorHandler.js, rateLimiter.js, validate.js (Zod)
 routes/          Express route modules; assembled in routes/index.js
 controllers/     Request handlers; delegate to repos/services
 services/        jwt.service.js, password.service.js
 repositories/    DynamoDB queries; no ORM
 validators/      Zod schemas applied via validate() middleware
-scripts/         createTables.js, seed.js, generateKeys.js
+scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js
 ```
 
-**Flow**: Route → `requireAuth` + `requireRole` + `validate(schema)` → Controller → Repository/Service
+**Flow**: Route → `requireAuth` + `requireRole` + `requireCsrf` + `validate(schema)` → Controller → Repository/Service
+
+**Key naming distinction**: `clientes.routes.js` is the staff-facing client management API (`/api/v1/clientes`). `cliente.routes.js` is the self-service portal API for the `CLIENTE` role (`/api/v1/cliente`).
+
+**Error response shape** (all errors follow this structure):
+```json
+{ "error": "...", "code": "SNAKE_CASE_CODE", "details": {...}, "requestId": "uuid" }
+```
 
 **Patterns:**
-- DynamoDB queries always use `ExpressionAttributeNames` + `ExpressionAttributeValues` (no interpolation)
-- All endpoints have a Zod schema applied at the middleware layer
-- Failed login attempts tracked; account locked after 5 failures; bcrypt saltRounds=12
+- DynamoDB queries always use `ExpressionAttributeNames` + `ExpressionAttributeValues` (no interpolation). Import `ddb` and `TABLES` from `config/dynamo.js`.
+- All endpoints have a Zod schema applied at the middleware layer via `validate(schema)`
+- Failed login attempts tracked; account locked after 5 failures for 15 min; bcrypt saltRounds=12
 - Logs via Winston with automatic redaction of `password`, `token`, `cc` fields
+- `HttpError(status, code, message)` is the standard way to pass errors to `next()`
 
 ### Frontend (`frontend/src/`)
 
 ```
-context/AuthContext.jsx    useAuth() hook; login/logout/bootstrap session from cookie
-guards/ProtectedRoute.jsx  Role check + token validity; redirects to /login if unauthorized
-pages/                     Screen components (Clientes/, Cliente/ portal, Dashboard, etc.)
+context/AuthContext.jsx    useAuth() hook; login/logout/register/hasRole/isAccessValid
+guards/ProtectedRoute.jsx  Role check + token expiry; redirects to /login if unauthorized
+pages/                     Clientes/ (staff views), Cliente/ (member portal), plus top-level pages
+components/layout/         Layout + Sidebar (staff), ClienteLayout + ClienteSidebar (member portal)
 services/                  api.js (axios client with interceptors), *.service.js per domain
-utils/                     tokenStore.js (JWT in memory), sanitize.js (DOMPurify), safeRoute.js
-constants/theme.js         ROLES enum, color palette, theme config
+utils/                     tokenStore.js (in-memory JWT), sanitize.js (DOMPurify), safeRoute.js
+constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITEMS, CLIENTE_NAV_ITEMS
 ```
 
+**Dual-layout routing**: `App.jsx` has two separate `<Route>` trees. Staff roles (`ADMIN`, `COACH`, `RECEP`) use `<Layout>` with `Sidebar`. `CLIENTE` uses `<ClienteLayout>` with `ClienteSidebar`. Routes under `/mi/*` are client-only; routes under `/dashboard`, `/clientes/*`, `/inventario`, `/nomina`, `/rutinas/*`, `/admin/*` are staff-only.
+
 **Patterns:**
-- JWT stored in memory only (never localStorage); refresh via httpOnly cookie
+- JWT stored in memory only via `tokenStore.js` (never localStorage); on page reload, `AuthContext` bootstraps from the httpOnly refresh cookie
 - Axios interceptor silently refreshes on 401 before retrying; injects Bearer + CSRF tokens
-- All dynamic HTML passes through DOMPurify before render
+- CSRF double-submit: `csrfToken` cookie is readable by JS (not httpOnly) so the client reads it and sends it as `X-CSRF-Token` header on mutating requests
+- All dynamic HTML passes through DOMPurify (`utils/sanitize.js`) before render
 - Forms: React Hook Form + Zod resolver
 
 ### Data Model (DynamoDB tables, prefix `gym_`)
@@ -108,29 +120,36 @@ constants/theme.js         ROLES enum, color palette, theme config
 | `gym_recordatorios` | recordatorioId | clienteId, estado |
 | `gym_workouts` | workoutId | clienteId, fecha |
 | `gym_medidas` | medidaId | clienteId, fecha |
+| `gym_prs` | — | clienteId |
+| `gym_settings` | — | — |
+| `gym_refresh_tokens` | jti | — |
+| `gym_login_attempts` | — | — |
 
 ## Adding a New Backend Endpoint
 
 1. **Validator** `validators/feature.schema.js` — Zod schema
-2. **Repository** `repositories/feature.repo.js` — DynamoDB queries
-3. **Controller** `controllers/feature.controller.js` — calls repo, sends response, passes errors to `next()`
-4. **Route** `routes/feature.routes.js` — wire `requireAuth`, `requireRole`, `validate(schema)`, controller
+2. **Repository** `repositories/feature.repo.js` — DynamoDB queries using `ddb` and `TABLES` from `config/dynamo.js`
+3. **Controller** `controllers/feature.controller.js` — calls repo, sends response, passes errors via `next(new HttpError(...))`
+4. **Route** `routes/feature.routes.js` — wire `requireAuth`, `requireRole`, `requireCsrf` (on mutating routes), `validate(schema)`, controller
 5. **Register** in `routes/index.js`: `router.use('/feature', featureRoutes)`
 
 ## Adding a Frontend Page
 
 1. Create component in `pages/`
-2. Add route in `App.jsx` wrapped with `<ProtectedRoute allowedRoles={[...]}>` if role-gated
-3. Add link in `components/layout/Sidebar.jsx`
-4. Create `services/feature.service.js` for API calls using the shared axios instance
+2. Add route in `App.jsx` inside the appropriate layout tree (`Layout` for staff, `ClienteLayout` for CLIENTE), wrapped with `<ProtectedRoute roles={[...]}>` for additional role checks
+3. Add link in `components/layout/Sidebar.jsx` (staff) or `ClienteSidebar.jsx` (member) via `constants/theme.js` nav arrays
+4. Create `services/feature.service.js` for API calls using the shared `api` axios instance from `services/api.js`
 
-## Database Reset
+## Database Scripts
 
-No migration framework; to modify schema:
 ```bash
-npm run db:reset   # Drop and recreate all tables
-npm run db:seed    # Reload demo data
+npm run db:create      # Create all tables (idempotent)
+npm run db:seed        # Load demo data
+npm run db:clear-seed  # Remove seeded data only (keeps tables)
+npm run db:reset       # Drop + recreate all tables, then seed
 ```
+
+No migration framework; schema changes require `db:reset`.
 
 ## Linting & Tests
 
@@ -150,10 +169,12 @@ See `backend/.env.example` for all variables. Critical ones:
 | `JWT_PRIVATE_KEY_PATH` | Path to RS256 private key (generated by `keys:gen`) |
 | `JWT_PUBLIC_KEY_PATH` | Path to RS256 public key |
 | `CORS_ORIGINS` | Comma-separated allowed origins |
+| `COOKIE_SECURE` | Set `true` in production (HTTPS only) |
 | `VITE_API_URL` | (frontend) Backend base URL |
 
 ## Security Notes
 
-- `docs/SECURITY-CHECKLIST.md` tracks pre-release items (HTTPS redirect, TLS 1.3, CSP headers, etc.)
+- `docs/SECURITY-CHECKLIST.md` tracks pre-release items (HTTPS redirect, TLS 1.3, Secrets Manager, OWASP ZAP)
 - Rate limiting: 200 req/15 min per IP globally; `/auth/login` stricter (5 attempts/15 min)
 - Never add `VITE_` prefixed secrets — they are bundled into the frontend build
+- Stack traces are suppressed in production (`IS_PROD` flag from `env.js`)
