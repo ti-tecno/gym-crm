@@ -50,9 +50,11 @@ api.interceptors.response.use(
       } catch { /* falla → seguir al reject */ }
     }
 
-    // 5xx y errores de red → backoff exponencial hasta 3 reintentos
+    // 5xx y errores de red transitorios → backoff exponencial hasta 3 reintentos
+    // ERR_BLOCKED_BY_CLIENT y similares (error.request sin response) no son retriables
     cfg.__retryCount = cfg.__retryCount || 0;
-    const retriable = !status || status >= 500;
+    const isNetworkError = !error.response && !error.request;
+    const retriable = (status >= 500) || isNetworkError;
     if (retriable && cfg.__retryCount < 3) {
       cfg.__retryCount += 1;
       const delay = Math.pow(2, cfg.__retryCount) * 250; // 500, 1000, 2000 ms

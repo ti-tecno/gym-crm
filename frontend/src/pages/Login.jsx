@@ -168,7 +168,7 @@ export default function Login() {
               {loginForm.formState.isSubmitting ? 'Entrando…' : 'Entrar'}
             </button>
             <div style={{ marginTop: 14, fontSize: 11, color: COLORS.muted, lineHeight: 1.7 }}>
-              Demos: <code>admin@ironcore.mx / Admin#2026</code> · <code>carlos@email.com / Cliente#2026</code>
+              Demo: <code>carlos@email.com / Cliente#2026</code>
             </div>
           </form>
         )}
