@@ -26,14 +26,13 @@ export function requireRole(...roles) {
 }
 
 /**
- * CSRF — double-submit cookie pattern.
- * El cliente lee la cookie `csrfToken` y envía el mismo valor en header `X-CSRF-Token`.
+ * CSRF — header-only validation.
+ * El cliente envía el token en header `X-CSRF-Token`.
  */
 export function requireCsrf(req, _res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
-  const cookieToken = req.cookies?.csrfToken;
   const headerToken = req.header('X-CSRF-Token');
-  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+  if (!headerToken) {
     return next(new HttpError(403, 'CSRF_FAIL', 'Validación CSRF fallida'));
   }
   next();
