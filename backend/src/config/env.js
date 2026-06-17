@@ -10,7 +10,7 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   API_PREFIX: z.string().default('/api/v1'),
   REQUEST_TIMEOUT_MS: z.coerce.number().default(30_000),
-  JSON_BODY_LIMIT: z.string().default('100kb'),
+  JSON_BODY_LIMIT: z.string().default('1mb'),
 
   TLS_KEY_PATH: z.string().optional(),
   TLS_CERT_PATH: z.string().optional(),

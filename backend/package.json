@@ -4,7 +4,9 @@
   "description": "IronCore API — Express + DynamoDB + JWT",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20.0.0" },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
@@ -29,6 +31,7 @@
     "helmet": "^7.1.0",
     "hpp": "^0.2.3",
     "jsonwebtoken": "^9.0.2",
+    "multer": "^2.2.0",
     "uuid": "^10.0.0",
     "winston": "^3.13.1",
     "zod": "^3.23.8"

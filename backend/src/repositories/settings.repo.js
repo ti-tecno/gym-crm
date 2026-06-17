@@ -48,9 +48,16 @@ const DEFAULT_PACKAGES = [
   },
 ];
 
+const PERIODOS_VALIDOS = ['trimestre', 'semestre', 'anualidad', 'mes', 'año'];
+
+function normalizePeriodo(raw) {
+  const v = String(raw || '').trim().toLowerCase();
+  if (v === 'anio') return 'año';
+  return PERIODOS_VALIDOS.includes(v) ? v : 'trimestre';
+}
+
 function normalizePackage(pkg = {}, idx = 0) {
-  const rawPeriodo = String(pkg.periodo || '').trim().toLowerCase();
-  const periodo = rawPeriodo === 'año' || rawPeriodo === 'anio' ? 'año' : 'mes';
+  const periodo = normalizePeriodo(pkg.periodo);
   return {
     id: String(pkg.id || '').trim() || `plan-${idx + 1}`,
     nombre: String(pkg.nombre || '').trim() || `Plan ${idx + 1}`,
@@ -85,10 +92,51 @@ const DEFAULT_SCHEDULE = {
   ],
 };
 
+const DEFAULT_COACHES = [
+  {
+    id: 'coach-1',
+    name: 'Arnold Schwarzenegger',
+    role: 'Hipertrofia & Fuerza',
+    desc: 'Planificación avanzada para desarrollo muscular, volumen y progresión de cargas.',
+    image: '/images/coaches/arnoldo.png',
+  },
+  {
+    id: 'coach-2',
+    name: 'Chris Bumstead',
+    role: 'Classic Physique',
+    desc: 'Técnica, estética y estructura de entrenamiento para un físico balanceado y competitivo.',
+    image: '/images/coaches/cbum.jpg',
+  },
+  {
+    id: 'coach-3',
+    name: 'Sergio Oliva',
+    role: 'Potencia & Volumen',
+    desc: 'Enfoque en densidad muscular, intensidad y ejecución en ejercicios compuestos.',
+    image: '/images/coaches/oliva.jpg',
+  },
+  {
+    id: 'coach-4',
+    name: 'Ronnie Coleman',
+    role: 'Entrenamiento de Alto Rendimiento',
+    desc: 'Rutinas de alta exigencia para fuerza máxima, disciplina y rendimiento total.',
+    image: '/images/coaches/ronnie.png',
+  },
+];
+
 const DEFAULT_CALENDAR = [
   { id: 'ev-1', fecha: '2026-01-10', titulo: 'Master class de fuerza', descripcion: 'Clase especial de técnica en sentadilla y peso muerto.' },
   { id: 'ev-2', fecha: '2026-01-15', titulo: 'Reto cardio', descripcion: 'Sesión grupal de resistencia de 60 minutos.' },
 ];
+
+function normalizeCoach(c = {}, idx = 0) {
+  return {
+    id: String(c.id || '').trim() || `coach-${idx + 1}`,
+    name: String(c.name || '').trim() || `Coach ${idx + 1}`,
+    role: String(c.role || '').trim(),
+    desc: String(c.desc || '').trim(),
+    image: String(c.image || '').trim(),
+  };
+}
 
 function normalizeSettings(item) {
   if (!item) {
@@ -97,6 +145,7 @@ function normalizeSettings(item) {
       packages: DEFAULT_PACKAGES,
       schedule: DEFAULT_SCHEDULE,
       calendar: DEFAULT_CALENDAR,
+      coaches: DEFAULT_COACHES,
     };
   }
   return {
@@ -106,6 +155,9 @@ function normalizeSettings(item) {
       : DEFAULT_PACKAGES,
     schedule: item.schedule || DEFAULT_SCHEDULE,
     calendar: Array.isArray(item.calendar) ? item.calendar : DEFAULT_CALENDAR,
+    coaches: Array.isArray(item.coaches) && item.coaches.length > 0
+      ? item.coaches.map((c, idx) => normalizeCoach(c, idx))
+      : DEFAULT_COACHES,
   };
 }
 
@@ -138,5 +190,6 @@ export async function getPublicSettings() {
     packages: all.packages,
     schedule: all.schedule,
     calendar: all.calendar,
+    coaches: all.coaches,
   };
 }

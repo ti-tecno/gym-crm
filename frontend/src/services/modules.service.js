@@ -49,4 +49,10 @@ export const settingsService = {
   updatePackages: (packages)    => api.put('/settings/admin/packages', { packages }).then(r => r.data),
   updateSchedule: (schedule)    => api.put('/settings/admin/schedule', { schedule }).then(r => r.data),
   updateCalendar: (calendar)    => api.put('/settings/admin/calendar', { calendar }).then(r => r.data),
+  updateCoaches:  (coaches)     => api.put('/settings/admin/coaches',  { coaches  }).then(r => r.data),
+  uploadCoachImg: (file)        => {
+    const form = new FormData();
+    form.append('image', file);
+    return api.post('/upload/coaches', form, { __retryCount: 3 }).then(r => r.data);
+  },
 };

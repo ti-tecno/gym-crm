@@ -6,7 +6,9 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\adri\\\\Documents\\\\GitHub\\\\gym-crm\" -Directory)",
       "Bash(Select-Object Name)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\adri\\\\Documents\\\\GitHub\\\\gym-crm\\\\backend\\\\src\\\\config\" -Filter \"dynamo.js\")",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.dependencies,null,2\\)\\)\")",
+      "Bash(npm install *)"
     ]
   }
 }

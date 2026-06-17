@@ -188,6 +188,7 @@ export default function LandingPage() {
   const [coachIndex, setCoachIndex] = useState(0);
 
   const [plans, setPlans] = useState(PLANS);
+  const [coaches, setCoaches] = useState(COACHES);
   const [sched, setSched] = useState({
     days: DAYS,
     slots: SCHEDULE_SLOTS,
@@ -198,6 +199,8 @@ export default function LandingPage() {
     settingsService.public().then((data) => {
       if (Array.isArray(data.packages) && data.packages.length > 0)
         setPlans(data.packages);
+      if (Array.isArray(data.coaches) && data.coaches.length > 0)
+        setCoaches(data.coaches);
       if (data.schedule?.days?.length && data.schedule?.slots?.length)
         setSched({
           days: data.schedule.days,
@@ -505,16 +508,17 @@ export default function LandingPage() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
   const nextCoach = useCallback(() => {
-    setCoachIndex((prev) => (prev + 1) % COACHES.length);
-  }, []);
+    setCoachIndex((prev) => (prev + 1) % coaches.length);
+  }, [coaches.length]);
 
   const prevCoach = useCallback(() => {
-    setCoachIndex((prev) => (prev - 1 + COACHES.length) % COACHES.length);
-  }, []);
+    setCoachIndex((prev) => (prev - 1 + coaches.length) % coaches.length);
+  }, [coaches.length]);
 
   useEffect(() => {
+    if (!coaches.length) return;
     const t = setInterval(() => {
-      setCoachIndex((prev) => (prev + 1) % COACHES.length);
+      setCoachIndex((prev) => (prev + 1) % coaches.length);
     }, 4000);
     return () => clearInterval(t);
   }, []);
@@ -1389,8 +1393,8 @@ export default function LandingPage() {
               }}
             >
               <img
-                src={COACHES[coachIndex].image}
-                alt={COACHES[coachIndex].name}
+                src={coaches[coachIndex]?.image}
+                alt={coaches[coachIndex]?.name}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
               <div
@@ -1440,7 +1444,7 @@ export default function LandingPage() {
                     margin: "0 0 6px",
                   }}
                 >
-                  {COACHES[coachIndex].name}
+                  {coaches[coachIndex]?.name}
                 </h3>
                 <p
                   style={{
@@ -1452,7 +1456,7 @@ export default function LandingPage() {
                     margin: "0 0 14px",
                   }}
                 >
-                  {COACHES[coachIndex].role}
+                  {coaches[coachIndex]?.role}
                 </p>
                 <p
                   style={{
@@ -1463,7 +1467,7 @@ export default function LandingPage() {
                     maxWidth: 620,
                   }}
                 >
-                  {COACHES[coachIndex].desc}
+                  {coaches[coachIndex]?.desc}
                 </p>
               </div>
 
@@ -1477,7 +1481,7 @@ export default function LandingPage() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {COACHES.map((_, i) => (
+                  {coaches.map((_, i) => (
                     <button
                       key={i}
                       onClick={() => setCoachIndex(i)}

@@ -9,7 +9,8 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      '/api': { target: 'https://api.eventopolis.com.mx:4000', changeOrigin: true },
+      '/api':    { target: 'https://api.eventopolis.com.mx:4000', changeOrigin: true },
+      '/uploads': { target: 'https://api.eventopolis.com.mx:4000', changeOrigin: true },
     },
   },
   build: {

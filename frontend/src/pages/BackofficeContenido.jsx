@@ -14,6 +14,7 @@ function hexToRgba(hex, alpha) {
 
 const TABS = [
   { id: "packages", icon: "💳", label: "Paquetes" },
+  { id: "coaches",  icon: "🏋️", label: "Coaches" },
   { id: "schedule", icon: "🗓", label: "Horarios" },
 ];
 
@@ -52,6 +53,7 @@ export default function BackofficeContenido() {
   const [err, setErr] = useState("");
 
   const [packages, setPackages] = useState([]);
+  const [coaches, setCoaches] = useState([]);
   const [schedule, setSchedule] = useState({
     days: [],
     classColors: {},
@@ -65,6 +67,7 @@ export default function BackofficeContenido() {
       try {
         const data = await settingsService.admin();
         setPackages(Array.isArray(data.packages) ? data.packages : []);
+        setCoaches(Array.isArray(data.coaches) ? data.coaches : []);
         const nextSchedule = data.schedule || {
           days: [],
           classColors: {},
@@ -260,6 +263,21 @@ export default function BackofficeContenido() {
     }
   };
 
+  const saveCoaches = async () => {
+    setSaving(true);
+    setErr("");
+    setMsg("");
+    try {
+      const clean = coaches.map(({ _uploading: _, ...c }) => c);
+      await settingsService.updateCoaches(clean);
+      setMsg("Coaches actualizados");
+    } catch (e) {
+      setErr(e?.response?.data?.error || "Error guardando coaches");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const saveSchedule = async () => {
     setSaving(true);
     setErr("");
@@ -303,7 +321,7 @@ export default function BackofficeContenido() {
                       id: `plan-${Date.now()}`,
                       nombre: "",
                       precio: 0,
-                      periodo: "mes",
+                      periodo: "trimestre",
                       features: [],
                       color: COLORS.accent,
                       destacado: false,
@@ -392,7 +410,7 @@ export default function BackofficeContenido() {
                     placeholder="Precio"
                   />
                   <select
-                    value={p.periodo || "mes"}
+                    value={p.periodo || "trimestre"}
                     onChange={(e) =>
                       setPackages((prev) =>
                         prev.map((x, idx) =>
@@ -401,8 +419,9 @@ export default function BackofficeContenido() {
                       )
                     }
                   >
-                    <option value="mes">Mensual</option>
-                    <option value="año">Anual</option>
+                    <option value="trimestre">Trimestre</option>
+                    <option value="semestre">Semestre</option>
+                    <option value="anualidad">Anualidad</option>
                   </select>
                 </div>
 
@@ -482,6 +501,227 @@ export default function BackofficeContenido() {
                 />
               </div>
             ))}
+          </div>
+        </Card>
+      )}
+
+      {tab === "coaches" && (
+        <Card
+          title="Coaches del carrusel"
+          right={
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() =>
+                  setCoaches((prev) => [
+                    ...prev,
+                    {
+                      id: `coach-${Date.now()}`,
+                      name: "",
+                      role: "",
+                      desc: "",
+                      image: "",
+                    },
+                  ])
+                }
+                style={{
+                  background: "transparent",
+                  color: COLORS.accent,
+                  border: `1px solid ${COLORS.accent}`,
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                }}
+              >
+                + Agregar coach
+              </button>
+              <button
+                onClick={saveCoaches}
+                disabled={saving}
+                style={{
+                  background: COLORS.accent,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                }}
+              >
+                {saving ? "Guardando…" : "Guardar coaches"}
+              </button>
+            </div>
+          }
+        >
+          <div style={{ display: "grid", gap: 16 }}>
+            {coaches.map((c, i) => (
+              <div
+                key={c.id || i}
+                style={{
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 12,
+                  padding: 14,
+                  display: "grid",
+                  gridTemplateColumns: "96px 1fr",
+                  gap: 16,
+                  alignItems: "start",
+                }}
+              >
+                {/* Preview foto */}
+                <div
+                  style={{
+                    width: 96,
+                    height: 96,
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    background: COLORS.surface,
+                    border: `1px solid ${COLORS.border}`,
+                    flexShrink: 0,
+                    position: "relative",
+                  }}
+                >
+                  {c.image ? (
+                    <img
+                      src={c.image}
+                      alt={c.name || "coach"}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={(e) => { e.target.style.display = "none"; }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: COLORS.muted,
+                        fontSize: 28,
+                      }}
+                    >
+                      🏋️
+                    </div>
+                  )}
+                </div>
+
+                {/* Campos */}
+                <div style={{ display: "grid", gap: 8 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <input
+                      value={c.name || ""}
+                      onChange={(e) =>
+                        setCoaches((prev) =>
+                          prev.map((x, idx) =>
+                            idx === i ? { ...x, name: e.target.value } : x,
+                          ),
+                        )
+                      }
+                      placeholder="Nombre completo"
+                    />
+                    <input
+                      value={c.role || ""}
+                      onChange={(e) =>
+                        setCoaches((prev) =>
+                          prev.map((x, idx) =>
+                            idx === i ? { ...x, role: e.target.value } : x,
+                          ),
+                        )
+                      }
+                      placeholder="Especialidad (ej: Hipertrofia & Fuerza)"
+                    />
+                  </div>
+                  <textarea
+                    value={c.desc || ""}
+                    onChange={(e) =>
+                      setCoaches((prev) =>
+                        prev.map((x, idx) =>
+                          idx === i ? { ...x, desc: e.target.value } : x,
+                        ),
+                      )
+                    }
+                    placeholder="Descripción breve"
+                    rows={2}
+                    style={{ resize: "vertical", fontFamily: "inherit", fontSize: 14 }}
+                  />
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input
+                      value={c.image || ""}
+                      onChange={(e) =>
+                        setCoaches((prev) =>
+                          prev.map((x, idx) =>
+                            idx === i ? { ...x, image: e.target.value } : x,
+                          ),
+                        )
+                      }
+                      placeholder="URL de foto"
+                      style={{ flex: 1 }}
+                    />
+                    <label
+                      style={{
+                        background: "transparent",
+                        color: COLORS.accent,
+                        border: `1px solid ${COLORS.accent}`,
+                        borderRadius: 8,
+                        padding: "6px 10px",
+                        cursor: c._uploading ? "not-allowed" : "pointer",
+                        fontSize: 12,
+                        whiteSpace: "nowrap",
+                        opacity: c._uploading ? 0.6 : 1,
+                      }}
+                    >
+                      {c._uploading ? "Subiendo…" : "Subir foto"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        style={{ display: "none" }}
+                        disabled={!!c._uploading}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setCoaches((prev) =>
+                            prev.map((x, idx) => idx === i ? { ...x, _uploading: true } : x),
+                          );
+                          try {
+                            const { url } = await settingsService.uploadCoachImg(file);
+                            setCoaches((prev) =>
+                              prev.map((x, idx) =>
+                                idx === i ? { ...x, image: url, _uploading: false } : x,
+                              ),
+                            );
+                          } catch {
+                            setCoaches((prev) =>
+                              prev.map((x, idx) => idx === i ? { ...x, _uploading: false } : x),
+                            );
+                            setErr("Error al subir la imagen");
+                          }
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                    <button
+                      onClick={() =>
+                        setCoaches((prev) => prev.filter((_, idx) => idx !== i))
+                      }
+                      style={{
+                        background: "transparent",
+                        color: "#e74c3c",
+                        border: "1px solid #e74c3c",
+                        borderRadius: 8,
+                        padding: "6px 10px",
+                        cursor: "pointer",
+                        fontSize: 12,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {coaches.length === 0 && (
+              <p style={{ color: COLORS.muted, textAlign: "center", padding: 24 }}>
+                Sin coaches. Agrega uno con el botón de arriba.
+              </p>
+            )}
           </div>
         </Card>
       )}

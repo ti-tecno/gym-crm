@@ -4,8 +4,12 @@ import cors from 'cors';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import hpp from 'hpp';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import env from './config/env.js';
 import logger from './config/logger.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import requestId from './middleware/requestId.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
 import errorHandler from './middleware/errorHandler.js';
@@ -73,6 +77,12 @@ app.use((req, _res, next) => {
   logger.debug('http', { id: req.id, m: req.method, u: req.originalUrl, ip: req.ip });
   next();
 });
+
+// Archivos estáticos (imágenes subidas)
+app.use('/uploads', express.static(path.resolve(__dirname, '../public/uploads'), {
+  maxAge: '7d',
+  etag: true,
+}));
 
 // Health (info mínima)
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: Date.now() }));

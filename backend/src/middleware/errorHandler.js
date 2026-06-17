@@ -37,6 +37,10 @@ export default function errorHandler(err, req, res, _next) {
     return res.status(403).json({ error: 'CORS bloqueado', code: 'CORS_BLOCKED', requestId: reqId });
   }
 
+  if (err.type === 'entity.too.large' || err.status === 413) {
+    return res.status(413).json({ error: 'El cuerpo de la petición es demasiado grande', code: 'PAYLOAD_TOO_LARGE', requestId: reqId });
+  }
+
   logger.error('Error no controlado', { reqId, message: err.message, stack: env.IS_PROD ? undefined : err.stack });
   res.status(500).json({
     error: env.IS_PROD ? 'Error interno' : err.message,
