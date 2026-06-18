@@ -521,7 +521,7 @@ export default function LandingPage() {
       setCoachIndex((prev) => (prev + 1) % coaches.length);
     }, 4000);
     return () => clearInterval(t);
-  }, []);
+  }, [coaches.length]);
 
   const heroOpacity = Math.max(0, 1 - scrollY / 480);
   const heroY = scrollY * 0.18;
