@@ -17,7 +17,22 @@
       "Bash(npm run dev > /tmp/backend.log 2>&1 & *)",
       "Bash(curl -s http://localhost:4000/api/v1/settings/public)",
       "Bash(python3 -m json.tool)",
-      "Bash(curl -s -X POST http://localhost:4000/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"admin@ironcore.mx\",\"password\":\"Admin#2026\"}')"
+      "Bash(curl -s -X POST http://localhost:4000/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"admin@ironcore.mx\",\"password\":\"Admin#2026\"}')",
+      "Bash(node --check src/repositories/clientes.repo.js)",
+      "Bash(node --check src/validators/cliente.schema.js)",
+      "Bash(node -e ' *)",
+      "Bash(npx --yes playwright --version)",
+      "Read(//root/.cache/**)",
+      "Bash(npx --yes playwright install chromium)",
+      "Bash(node --experimental-vm-modules -e \"1\")",
+      "Bash(npm root *)",
+      "Bash(NODE_PATH=$\\(npm root\\) node /tmp/claude-0/-root-gym-crm/4ee9abfe-a6ef-40b2-bdcb-2b146f4d1f05/scratchpad/verify-clientes.mjs)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(node /tmp/claude-0/-root-gym-crm/4ee9abfe-a6ef-40b2-bdcb-2b146f4d1f05/scratchpad/verify-clientes.mjs)",
+      "Bash(npx --yes playwright install-deps chromium)",
+      "Bash(pm2 restart *)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>console.log\\(JSON.parse\\(d\\).length\\)\\)\")"
     ],
     "additionalDirectories": [
       "/tmp"

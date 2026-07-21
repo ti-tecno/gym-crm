@@ -7,6 +7,7 @@ import { useAuth } from "./context/AuthContext.jsx";
 
 import Login from "./pages/Login.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
+import AvisoPrivacidad from "./pages/AvisoPrivacidad.jsx";
 
 // Staff
 import Dashboard from "./pages/Dashboard.jsx";
@@ -42,6 +43,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/aviso-de-privacidad" element={<AvisoPrivacidad />} />
+      <Route path="/privacidad" element={<AvisoPrivacidad />} />
 
       {/* ── Portal STAFF (ADMIN / COACH / RECEP) ── */}
       <Route

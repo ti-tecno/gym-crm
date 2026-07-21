@@ -110,9 +110,12 @@ export async function dashboardCliente(req, res, next) {
     const totalSesiones = workouts.length;
     const racha = progreso.calcRacha(workouts);
     const últimoEntreno = workouts[0]?.fecha || null;
-    const pesoActual = medidas.find((m) => m.pesoKg)?.pesoKg || null;
-    const pesoInicial = [...medidas].reverse().find((m) => m.pesoKg)?.pesoKg || null;
-    const diffPeso = pesoActual && pesoInicial ? Number((pesoActual - pesoInicial).toFixed(2)) : null;
+    const pesoRegistro = cliente.inscripcion?.peso ?? null;
+    const pesoActual = medidas.find((m) => m.pesoKg != null)?.pesoKg ?? pesoRegistro;
+    const pesoInicial = [...medidas].reverse().find((m) => m.pesoKg != null)?.pesoKg ?? pesoRegistro;
+    const diffPeso = pesoActual != null && pesoInicial != null
+      ? Number((pesoActual - pesoInicial).toFixed(2))
+      : null;
     const rutina = rutinas.find((r) => r.clienteId === cid) || null;
 
     res.json({

@@ -10,12 +10,12 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   API_PREFIX: z.string().default('/api/v1'),
   REQUEST_TIMEOUT_MS: z.coerce.number().default(30_000),
-  JSON_BODY_LIMIT: z.string().default('1mb'),
+  JSON_BODY_LIMIT: z.string().default('100kb'),
 
   TLS_KEY_PATH: z.string().optional(),
   TLS_CERT_PATH: z.string().optional(),
 
-  CORS_ORIGINS: z.string().default('http://localhost:5173'),
+  CORS_ORIGINS: z.string().default('http://localhost:5173,https://www.iron-core.mx'),
 
   JWT_PRIVATE_KEY_PATH: z.string(),
   JWT_PUBLIC_KEY_PATH: z.string(),
@@ -63,7 +63,10 @@ function readKey(p) {
 
 env.JWT_PRIVATE_KEY = readKey(env.JWT_PRIVATE_KEY_PATH);
 env.JWT_PUBLIC_KEY = readKey(env.JWT_PUBLIC_KEY_PATH);
-env.CORS_ORIGIN_LIST = env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean);
+env.CORS_ORIGIN_LIST = Array.from(new Set([
+  ...env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean),
+  'https://www.iron-core.mx',
+]));
 env.IS_PROD = env.NODE_ENV === 'production';
 
 export default env;

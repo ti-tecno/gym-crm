@@ -4,6 +4,7 @@ import logger from '../config/logger.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { createUser, getUserByEmail, getUserById, incrementFailedAttempts, lockUser, resetFailedAttempts } from '../repositories/users.repo.js';
 import { createCliente, getClienteByEmail } from '../repositories/clientes.repo.js';
+import * as progreso from '../repositories/progreso.repo.js';
 import { getRefresh, revokeRefresh, saveRefresh } from '../repositories/refreshTokens.repo.js';
 import { hashPassword, verifyPassword } from '../services/password.service.js';
 import { csrfTokenValue, signAccessToken, signRefreshToken, verifyRefreshToken } from '../services/jwt.service.js';
@@ -80,7 +81,7 @@ export async function login(req, res, next) {
 /** Auto-registro de CLIENTE. Crea User + Cliente vinculados y devuelve sesión activa. */
 export async function register(req, res, next) {
   try {
-    const { nombre, apellido, email, telefono, password, plan } = req.body;
+    const { nombre, apellido, email, telefono, password, plan, inscripcion } = req.body;
 
     if (await getUserByEmail(email)) {
       return next(new HttpError(409, 'EMAIL_TAKEN', 'Ese email ya está registrado'));
@@ -100,7 +101,25 @@ export async function register(req, res, next) {
       vencimiento: venc.toISOString().slice(0, 10),
       estado: 'Por vencer', // auto-aprobado pero pendiente de pago inicial
       autoRegistrado: true,
+      ...(inscripcion ? { inscripcion } : {}),
     });
+
+    if (inscripcion?.peso != null) {
+      try {
+        await progreso.createMedida({
+          clienteId: cliente.clienteId,
+          fecha: inscripcion.fecha || today.toISOString().slice(0, 10),
+          pesoKg: inscripcion.peso,
+          notas: 'Peso inicial al registrarse',
+        });
+      } catch (measureErr) {
+        logger.warn('No se pudo guardar la medida inicial del cliente', {
+          reqId: req.id,
+          clienteId: cliente.clienteId,
+          error: measureErr?.message,
+        });
+      }
+    }
 
     // 2) Crea el User con rol CLIENTE vinculado al Cliente
     const passwordHash = await hashPassword(password);

@@ -6,7 +6,7 @@ import * as nomRepo from '../repositories/nomina.repo.js';
 export async function summary(_req, res, next) {
   try {
     const [clientes, pagos, inventario, nomina] = await Promise.all([
-      clientesRepo.listClientes({ limit: 100 }),
+      clientesRepo.listClientes({ limit: 5000 }),
       pagosRepo.listPagos({ limit: 5 }),
       invRepo.listInventario(),
       nomRepo.listEmpleados(),

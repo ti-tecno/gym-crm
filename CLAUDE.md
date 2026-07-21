@@ -60,13 +60,13 @@ Clients can self-register via Login → "Crear cuenta" tab.
 
 ```
 config/          env.js (Zod env validation), dynamo.js (DDB client + TABLES constant), logger.js (Winston)
-middleware/      auth.js (JWT + RBAC + CSRF), errorHandler.js, rateLimiter.js, validate.js (Zod)
-routes/          Express route modules; assembled in routes/index.js
+middleware/      auth.js (JWT + RBAC + CSRF), errorHandler.js, notFound.js, rateLimiter.js, requestId.js, validate.js (Zod)
+routes/          Express route modules; assembled in routes/index.js (auth, dashboard, clientes, pagos, inventario, nomina, rutinas, recordatorios, settings, upload, cliente)
 controllers/     Request handlers; delegate to repos/services
 services/        jwt.service.js, password.service.js
 repositories/    DynamoDB queries; no ORM
 validators/      Zod schemas applied via validate() middleware
-scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js
+scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js, importWorkbook.js (one-off legacy Excel → DynamoDB import, see below)
 ```
 
 **Flow**: Route → `requireAuth` + `requireRole` + `requireCsrf` + `validate(schema)` → Controller → Repository/Service
@@ -84,20 +84,22 @@ scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js
 - Failed login attempts tracked; account locked after 5 failures for 15 min; bcrypt saltRounds=12
 - Logs via Winston with automatic redaction of `password`, `token`, `cc` fields
 - `HttpError(status, code, message)` is the standard way to pass errors to `next()`
+- File uploads (`upload.routes.js`/`upload.controller.js`) use `multer` disk storage, writing to `backend/public/uploads/<category>/` (currently coach images) with a mime allowlist and 5MB limit; served as static files from `backend/public/`
+- `gym_settings` backs the public landing page and admin "Contenido" backoffice (packages, coaches, schedule) via `settings.routes.js` — this is the only table read by an unauthenticated route
 
 ### Frontend (`frontend/src/`)
 
 ```
 context/AuthContext.jsx    useAuth() hook; login/logout/register/hasRole/isAccessValid
 guards/ProtectedRoute.jsx  Role check + token expiry; redirects to /login if unauthorized
-pages/                     Clientes/ (staff views), Cliente/ (member portal), plus top-level pages
+pages/                     Clientes/ (staff views), Cliente/ (member portal), LandingPage.jsx (public), BackofficeContenido.jsx (admin content editor), plus top-level pages
 components/layout/         Layout + Sidebar (staff), ClienteLayout + ClienteSidebar (member portal)
 services/                  api.js (axios client with interceptors), *.service.js per domain
 utils/                     tokenStore.js (in-memory JWT), sanitize.js (DOMPurify), safeRoute.js
 constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITEMS, CLIENTE_NAV_ITEMS
 ```
 
-**Dual-layout routing**: `App.jsx` has two separate `<Route>` trees. Staff roles (`ADMIN`, `COACH`, `RECEP`) use `<Layout>` with `Sidebar`. `CLIENTE` uses `<ClienteLayout>` with `ClienteSidebar`. Routes under `/mi/*` are client-only; routes under `/dashboard`, `/clientes/*`, `/inventario`, `/nomina`, `/rutinas/*`, `/admin/*` are staff-only.
+**Dual-layout routing**: `App.jsx` has two separate `<Route>` trees. Staff roles (`ADMIN`, `COACH`, `RECEP`) use `<Layout>` with `Sidebar`. `CLIENTE` uses `<ClienteLayout>` with `ClienteSidebar`. Routes under `/mi/*` are client-only; routes under `/dashboard`, `/clientes/*`, `/inventario`, `/nomina`, `/rutinas/*`, `/admin/*` are staff-only. `/` renders `LandingPage` (public marketing page, driven by `gym_settings`) when there's no session, or redirects to the correct portal when there is one. `/admin/contenido` (ADMIN only) edits the landing page's packages/coaches/schedule content.
 
 **Patterns:**
 - JWT stored in memory only via `tokenStore.js` (never localStorage); on page reload, `AuthContext` bootstraps from the httpOnly refresh cookie
@@ -143,10 +145,11 @@ constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITE
 ## Database Scripts
 
 ```bash
-npm run db:create      # Create all tables (idempotent)
-npm run db:seed        # Load demo data
-npm run db:clear-seed  # Remove seeded data only (keeps tables)
-npm run db:reset       # Drop + recreate all tables, then seed
+npm run db:create          # Create all tables (idempotent)
+npm run db:seed            # Load demo data
+npm run db:clear-seed      # Remove seeded data only (keeps tables)
+npm run db:reset           # Drop + recreate all tables, then seed
+npm run db:import:workbook # One-off import of legacy "Iron core gym" Excel workbook into DynamoDB (pass a path, or --dry-run)
 ```
 
 No migration framework; schema changes require `db:reset`.

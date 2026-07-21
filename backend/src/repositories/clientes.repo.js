@@ -14,7 +14,7 @@ export async function getClienteByEmail(email) {
   return Items?.[0] || null;
 }
 
-export async function listClientes({ q, plan, estado, limit = 50 } = {}) {
+export async function listClientes({ q, plan, estado, limit = 50, all = false } = {}) {
   const expr = [];
   const names = {};
   const values = {};
@@ -22,14 +22,22 @@ export async function listClientes({ q, plan, estado, limit = 50 } = {}) {
   if (estado) { expr.push('#s = :s'); names['#s'] = 'estado'; values[':s'] = estado; }
   if (q)      { expr.push('contains(#n, :q)'); names['#n'] = 'nombre'; values[':q'] = q; }
 
-  const params = { TableName: TABLES.CLIENTES, Limit: limit };
+  const params = { TableName: TABLES.CLIENTES };
   if (expr.length) {
     params.FilterExpression = expr.join(' AND ');
     params.ExpressionAttributeNames = names;
     params.ExpressionAttributeValues = values;
   }
-  const { Items = [] } = await ddb.send(new ScanCommand(params));
-  return Items;
+
+  const items = [];
+  let ExclusiveStartKey;
+  do {
+    const res = await ddb.send(new ScanCommand({ ...params, ExclusiveStartKey }));
+    items.push(...(res.Items || []));
+    ExclusiveStartKey = res.LastEvaluatedKey;
+  } while (ExclusiveStartKey && (all || items.length < limit));
+
+  return all ? items : items.slice(0, limit);
 }
 
 export async function getCliente(id) {

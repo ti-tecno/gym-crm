@@ -521,7 +521,7 @@ export default function LandingPage() {
       setCoachIndex((prev) => (prev + 1) % coaches.length);
     }, 4000);
     return () => clearInterval(t);
-  }, []);
+  }, [coaches.length]);
 
   const heroOpacity = Math.max(0, 1 - scrollY / 480);
   const heroY = scrollY * 0.18;
@@ -2265,23 +2265,42 @@ export default function LandingPage() {
         >
           © 2026 IRON CORE. TODOS LOS DERECHOS RESERVADOS.
         </span>
-        <button
-          className="ic-outline-btn"
-          onClick={() => navigate("/login")}
-          style={{
-            background: "transparent",
-            border: `1px solid ${COLORS.border}`,
-            color: COLORS.muted,
-            padding: "8px 22px",
-            borderRadius: 8,
-            fontFamily: "DM Mono, monospace",
-            fontSize: 10,
-            letterSpacing: 2,
-            cursor: "pointer",
-          }}
-        >
-          ACCEDER →
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <button
+            className="ic-outline-btn"
+            onClick={() => navigate("/aviso-de-privacidad")}
+            style={{
+              background: "transparent",
+              border: `1px solid ${COLORS.border}`,
+              color: COLORS.muted,
+              padding: "8px 18px",
+              borderRadius: 8,
+              fontFamily: "DM Mono, monospace",
+              fontSize: 10,
+              letterSpacing: 2,
+              cursor: "pointer",
+            }}
+          >
+            AVISO DE PRIVACIDAD
+          </button>
+          <button
+            className="ic-outline-btn"
+            onClick={() => navigate("/login")}
+            style={{
+              background: "transparent",
+              border: `1px solid ${COLORS.border}`,
+              color: COLORS.muted,
+              padding: "8px 22px",
+              borderRadius: 8,
+              fontFamily: "DM Mono, monospace",
+              fontSize: 10,
+              letterSpacing: 2,
+              cursor: "pointer",
+            }}
+          >
+            ACCEDER →
+          </button>
+        </div>
       </footer>
     </div>
   );
