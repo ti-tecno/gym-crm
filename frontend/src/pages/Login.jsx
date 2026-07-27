@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext.jsx";
 import { COLORS } from "../constants/theme.js";
 import FInput from "../components/ui/FInput.jsx";
@@ -186,10 +187,11 @@ function homeForRol(rol) {
 export default function Login() {
   const [mode, setMode] = useState("login"); // 'login' | 'register'
   const [serverError, setServerError] = useState("");
+  const [googleError, setGoogleError] = useState("");
   const [planSel, setPlanSel] = useState("Premium");
   const [registerStep, setRegisterStep] = useState(1);
 
-  const { login, register: doRegister } = useAuth();
+  const { login, register: doRegister, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
@@ -272,6 +274,22 @@ export default function Login() {
         e?.response?.data?.error || "No fue posible iniciar sesión",
       );
       await new Promise((r) => setTimeout(r, 300 * (3 - attemptsLeft() + 1)));
+    }
+  };
+
+  const onGoogleSuccess = async (credentialResponse) => {
+    setServerError("");
+    setGoogleError("");
+    try {
+      const u = await loginWithGoogle(credentialResponse.credential);
+      goAfterLogin(u.rol);
+    } catch (e) {
+      const code = e?.response?.data?.code;
+      setGoogleError(
+        code === "NO_ACCOUNT"
+          ? "No encontramos una cuenta con ese correo de Google."
+          : e?.response?.data?.error || "No fue posible iniciar sesión con Google",
+      );
     }
   };
 
@@ -523,6 +541,65 @@ export default function Login() {
               </Link>
             </div>
           </form>
+        )}
+
+        {mode === "login" && (
+          <div style={{ marginTop: 18 }}>
+            <div
+              style={{
+                textAlign: "center",
+                color: COLORS.muted,
+                fontSize: 11,
+                marginBottom: 12,
+              }}
+            >
+              o continúa con
+            </div>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <GoogleLogin
+                onSuccess={onGoogleSuccess}
+                onError={() =>
+                  setGoogleError("No fue posible iniciar sesión con Google")
+                }
+                theme="filled_black"
+                width="320"
+              />
+            </div>
+            {googleError && (
+              <div
+                style={{
+                  marginTop: 10,
+                  color: COLORS.red,
+                  background: "#2b0d0d",
+                  border: `1px solid ${COLORS.red}44`,
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  fontSize: 12,
+                }}
+              >
+                {googleError}{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("register");
+                    setServerError("");
+                    setGoogleError("");
+                  }}
+                  style={{
+                    color: COLORS.accent,
+                    background: "none",
+                    border: "none",
+                    textDecoration: "underline",
+                    cursor: "pointer",
+                    padding: 0,
+                    fontSize: 12,
+                  }}
+                >
+                  Crear cuenta
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {mode === "register" && (

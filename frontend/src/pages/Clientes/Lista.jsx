@@ -46,6 +46,7 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
       plan: cliente.plan || '',
       vencimiento: cliente.vencimiento ? String(cliente.vencimiento).slice(0, 10) : '',
       monto: cliente.monto ?? '',
+      tipoMensualidad: cliente.tipoMensualidad || '',
       estado: cliente.estado || 'Activo',
     });
   };
@@ -71,6 +72,7 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
       };
       if (editing.vencimiento) payload.vencimiento = editing.vencimiento;
       if (editing.monto !== '') payload.monto = Number(editing.monto);
+      if (editing.tipoMensualidad) payload.tipoMensualidad = editing.tipoMensualidad;
 
       await clientesService.update(editing.clienteId, payload);
       await reload();
@@ -139,7 +141,7 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              {['Cliente', 'Plan', 'Vencimiento', 'Monto', 'Estado', 'Acciones'].map((h) => (
+              {['Cliente', 'Plan', 'Mensualidad', 'Vencimiento', 'Monto', 'Estado', 'Acciones'].map((h) => (
                 <th key={h} style={{ padding: '12px 18px', textAlign: 'left', color: COLORS.muted, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', fontFamily: "'DM Mono',monospace", fontWeight: 500 }}>
                   {h}
                 </th>
@@ -162,6 +164,7 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
                   </div>
                 </td>
                 <td style={{ padding: '13px 18px', color: COLORS.subtle, fontSize: 13 }}>{c.plan}</td>
+                <td style={{ padding: '13px 18px', color: COLORS.subtle, fontSize: 13 }}>{c.tipoMensualidad || '—'}</td>
                 <td style={{ padding: '13px 18px', color: COLORS.subtle, fontSize: 13, fontFamily: "'DM Mono',monospace" }}>{fmtDate(c.vencimiento)}</td>
                 <td style={{ padding: '13px 18px', color: COLORS.green, fontSize: 13, fontFamily: "'DM Mono',monospace", fontWeight: 600 }}>{fmtMoney(c.monto)}</td>
                 <td style={{ padding: '13px 18px' }}><Badge text={c.estado} /></td>
@@ -249,7 +252,7 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
                 </label>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
                 <label style={{ display: 'grid', gap: 6 }}>
                   <span style={{ color: COLORS.muted, fontSize: 12 }}>Plan</span>
                   <select
@@ -261,6 +264,20 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
                     <option value="Básico">Básico</option>
                     <option value="Premium">Premium</option>
                     <option value="Elite">Elite</option>
+                  </select>
+                </label>
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <span style={{ color: COLORS.muted, fontSize: 12 }}>Tipo de Mensualidad</span>
+                  <select
+                    value={editing.tipoMensualidad}
+                    onChange={(e) => setEditing({ ...editing, tipoMensualidad: e.target.value })}
+                    style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: '10px 12px', color: COLORS.text, outline: 'none' }}
+                  >
+                    <option value="">Sin definir</option>
+                    <option value="Mensual">Mensual</option>
+                    <option value="3 Meses">3 Meses</option>
+                    <option value="6 Meses">6 Meses</option>
+                    <option value="Anual">Anual</option>
                   </select>
                 </label>
                 <label style={{ display: 'grid', gap: 6 }}>

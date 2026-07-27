@@ -37,6 +37,7 @@ export const TABLES = {
   INVENTARIO_MOVIMIENTOS: `${env.DYNAMODB_TABLE_PREFIX}inventario_movimientos`,
   NOMINA: `${env.DYNAMODB_TABLE_PREFIX}nomina`,
   GASTOS: `${env.DYNAMODB_TABLE_PREFIX}gastos`,
+  INGRESOS: `${env.DYNAMODB_TABLE_PREFIX}ingresos`,
   CREDITOS: `${env.DYNAMODB_TABLE_PREFIX}creditos`,
   CREDITO_ABONOS: `${env.DYNAMODB_TABLE_PREFIX}credito_abonos`,
   RUTINAS_CLIENTES: `${env.DYNAMODB_TABLE_PREFIX}rutinas_clientes`,

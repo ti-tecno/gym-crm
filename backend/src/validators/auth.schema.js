@@ -8,6 +8,12 @@ export const loginSchema = z.object({
   password: z.string().min(8).max(128),
 });
 
+// El credential es el ID token (JWT) de Google Identity Services; la verificación
+// real de firma/audiencia ocurre server-side en el controlador, no aquí.
+export const googleLoginSchema = z.object({
+  credential: z.string().min(20),
+});
+
 const optionalString = (schema) =>
   z.preprocess((v) => (v === '' || v === null ? undefined : v), schema.optional());
 

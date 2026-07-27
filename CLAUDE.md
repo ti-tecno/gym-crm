@@ -61,12 +61,12 @@ Clients can self-register via Login → "Crear cuenta" tab.
 ```
 config/          env.js (Zod env validation), dynamo.js (DDB client + TABLES constant), logger.js (Winston)
 middleware/      auth.js (JWT + RBAC + CSRF), errorHandler.js, notFound.js, rateLimiter.js, requestId.js, validate.js (Zod)
-routes/          Express route modules; assembled in routes/index.js (auth, dashboard, clientes, pagos, inventario, nomina, rutinas, recordatorios, settings, upload, cliente)
+routes/          Express route modules; assembled in routes/index.js (auth, dashboard, clientes, pagos, inventario, nomina, gastos, ingresos, creditos, rutinas, recordatorios, settings, upload, cliente)
 controllers/     Request handlers; delegate to repos/services
 services/        jwt.service.js, password.service.js
 repositories/    DynamoDB queries; no ORM
 validators/      Zod schemas applied via validate() middleware
-scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js, importWorkbook.js (one-off legacy Excel → DynamoDB import, see below)
+scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js, importWorkbook.js / importMembers.js / importGastos.js / importIngresos.js / importInscripciones.js (one-off legacy data imports, see below), dedupeClientes.js
 ```
 
 **Flow**: Route → `requireAuth` + `requireRole` + `requireCsrf` + `validate(schema)` → Controller → Repository/Service
@@ -94,7 +94,8 @@ context/AuthContext.jsx    useAuth() hook; login/logout/register/hasRole/isAcces
 guards/ProtectedRoute.jsx  Role check + token expiry; redirects to /login if unauthorized
 pages/                     Clientes/ (staff views), Cliente/ (member portal), LandingPage.jsx (public), BackofficeContenido.jsx (admin content editor), plus top-level pages
 components/layout/         Layout + Sidebar (staff), ClienteLayout + ClienteSidebar (member portal)
-services/                  api.js (axios client with interceptors), *.service.js per domain
+components/ui/             Shared primitives: Avatar, Badge, FInput, SectionHeader, StatCard, TabBar
+services/                  api.js (axios client with interceptors), auth.service.js, cliente.service.js, modules.service.js (dashboard/clientes/pagos/inventario/nomina/rutinas/recordatorios/settings services, grouped in one file)
 utils/                     tokenStore.js (in-memory JWT), sanitize.js (DOMPurify), safeRoute.js
 constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITEMS, CLIENTE_NAV_ITEMS
 ```
@@ -117,6 +118,9 @@ constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITE
 | `gym_pagos` | pagoId | clienteId, fecha |
 | `gym_inventario` | itemId | categoria |
 | `gym_nomina` | empleadoId | estado |
+| `gym_gastos` | gastoId | fecha |
+| `gym_ingresos` | ingresoId | fecha |
+| `gym_creditos` | creditoId | clienteId, fecha |
 | `gym_rutinas_clientes` | rutinaId | clienteId |
 | `gym_rutinas_coach` | rutinaId | — |
 | `gym_recordatorios` | recordatorioId | clienteId, estado |
@@ -126,6 +130,10 @@ constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITE
 | `gym_settings` | — | — |
 | `gym_refresh_tokens` | jti | — |
 | `gym_login_attempts` | — | — |
+
+`createTables.js` also provisions a set of legacy tables (`gym_planes`, `gym_inscripciones`, `gym_membresias`, `gym_productos`, `gym_venta_pedidos`, `gym_venta_detalles`, `gym_inventario_movimientos`, `gym_credito_abonos`) that exist solely as the target schema for `importWorkbook.js`. No route, controller, or repository in the live app reads or writes them — don't treat their presence as evidence of an active feature. (`gym_gastos` and `gym_creditos` used to be in this list but now back the live `gastos.routes.js` and `creditos.routes.js` CRUD features respectively.)
+
+**Créditos data note**: `gym_creditos` was originally populated by a one-off `importWorkbook.js` run against the legacy "Iron core gym" Excel workbook (24 items, `sourceSheet: 'credito'`). Items from that import carry a real `clienteId` FK (resolved to a name via `gym_clientes` at read time in `creditos.repo.js`); items created through the live UI instead store the name directly in `legacyUsuario`. Both paths are merged into a single `cliente` display field on read — don't assume every row has a `clienteId`. `credito.csv` in the repo root is a CSV export of that same already-imported "credito" sheet — re-importing it would duplicate data, so there's no `db:import:credito` script.
 
 ## Adding a New Backend Endpoint
 
@@ -150,6 +158,12 @@ npm run db:seed            # Load demo data
 npm run db:clear-seed      # Remove seeded data only (keeps tables)
 npm run db:reset           # Drop + recreate all tables, then seed
 npm run db:import:workbook # One-off import of legacy "Iron core gym" Excel workbook into DynamoDB (pass a path, or --dry-run)
+npm run db:import:members  # One-off import of ironmembers.csv into gym_clientes (pass a path, or --dry-run)
+npm run db:import:gastos   # One-off import of gastos.csv into gym_gastos (pass a path, or --dry-run)
+npm run db:import:ingresos # One-off import of ingresos.csv into gym_ingresos (pass a path, or --dry-run)
+npm run db:import:inscripciones # One-off import of inscripciones.csv (despite the name, it's counter/vending product sales, not membership sign-ups) into gym_ingresos alongside ingresos.csv (pass a path, or --dry-run)
+npm run db:backfill:mensualidad # One-off: for each gym_clientes record, finds its latest membership-type payment in gym_ingresos (by exact normalized name match) and sets monto/tipoMensualidad/vencimiento/estado from it (--dry-run supported). Classification of which ingresos descriptions count as a membership payment (vs. counter sales) is a hardcoded lookup table inside the script, built from a manual review of gym_ingresos at the time it was written — re-run only after re-checking that list still covers current data.
+npm run db:dedupe:clientes # Merge duplicate gym_clientes records (matched by name/email) and repoint pagos/rutinas/recordatorios/medidas/workouts/prs to the survivor (--dry-run supported)
 ```
 
 No migration framework; schema changes require `db:reset`.

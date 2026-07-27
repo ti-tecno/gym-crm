@@ -14,6 +14,9 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Clientes from "./pages/Clientes/index.jsx";
 import Inventario from "./pages/Inventario.jsx";
 import Nomina from "./pages/Nomina.jsx";
+import Gastos from "./pages/Gastos.jsx";
+import Ingresos from "./pages/Ingresos.jsx";
+import Creditos from "./pages/Creditos.jsx";
 import RutinasClientes from "./pages/RutinasClientes.jsx";
 import RutinasCoach from "./pages/RutinasCoach.jsx";
 import BackofficeContenido from "./pages/BackofficeContenido.jsx";
@@ -69,6 +72,30 @@ export default function App() {
           element={
             <ProtectedRoute roles={[ROLES.ADMIN]}>
               <Nomina />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/gastos"
+          element={
+            <ProtectedRoute roles={[ROLES.ADMIN]}>
+              <Gastos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ingresos"
+          element={
+            <ProtectedRoute roles={[ROLES.ADMIN]}>
+              <Ingresos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/creditos"
+          element={
+            <ProtectedRoute roles={[ROLES.ADMIN]}>
+              <Creditos />
             </ProtectedRoute>
           }
         />

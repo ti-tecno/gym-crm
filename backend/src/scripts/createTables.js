@@ -234,6 +234,21 @@ const tableDefs = [
     ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
+    TableName: TABLES.INGRESOS,
+    KeySchema: [{ AttributeName: 'ingresoId', KeyType: 'HASH' }],
+    AttributeDefinitions: [
+      { AttributeName: 'ingresoId', AttributeType: 'S' },
+      { AttributeName: 'fecha', AttributeType: 'S' },
+    ],
+    GlobalSecondaryIndexes: [{
+      IndexName: 'fecha-index',
+      KeySchema: [{ AttributeName: 'fecha', KeyType: 'HASH' }],
+      Projection: { ProjectionType: 'ALL' },
+      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
+    }],
+    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
+  },
+  {
     TableName: TABLES.CREDITOS,
     KeySchema: [{ AttributeName: 'creditoId', KeyType: 'HASH' }],
     AttributeDefinitions: [

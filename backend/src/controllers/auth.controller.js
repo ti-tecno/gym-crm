@@ -1,8 +1,9 @@
 import { v4 as uuid } from 'uuid';
+import { OAuth2Client } from 'google-auth-library';
 import env from '../config/env.js';
 import logger from '../config/logger.js';
 import { HttpError } from '../middleware/errorHandler.js';
-import { createUser, getUserByEmail, getUserById, incrementFailedAttempts, lockUser, resetFailedAttempts } from '../repositories/users.repo.js';
+import { createUser, getUserByEmail, getUserById, incrementFailedAttempts, linkGoogleAccount, lockUser, resetFailedAttempts } from '../repositories/users.repo.js';
 import { createCliente, getClienteByEmail } from '../repositories/clientes.repo.js';
 import * as progreso from '../repositories/progreso.repo.js';
 import { getRefresh, revokeRefresh, saveRefresh } from '../repositories/refreshTokens.repo.js';
@@ -15,6 +16,8 @@ const REFRESH_COOKIE = 'refreshToken';
 const CSRF_COOKIE = 'csrfToken';
 const MAX_FAILED = 5;
 const LOCK_MIN = 15;
+
+const googleClient = env.GOOGLE_CLIENT_ID ? new OAuth2Client(env.GOOGLE_CLIENT_ID) : null;
 
 function setAuthCookies(res, refreshToken, csrf) {
   const base = {
@@ -34,6 +37,21 @@ function clearAuthCookies(res) {
   const base = { path: '/', domain: env.COOKIE_DOMAIN || undefined };
   res.clearCookie(REFRESH_COOKIE, base);
   res.clearCookie(CSRF_COOKIE, base);
+}
+
+async function issueSession(res, user) {
+  const accessToken = signAccessToken({ sub: user.userId, email: user.email, rol: user.rol, cid: user.clienteId });
+  const { token: refreshToken, jti } = signRefreshToken({ sub: user.userId });
+  await saveRefresh({ jti, userId: user.userId, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+
+  const csrf = csrfTokenValue();
+  setAuthCookies(res, refreshToken, csrf);
+
+  return {
+    accessToken,
+    user: { id: user.userId, email: user.email, nombre: user.nombre, rol: user.rol, clienteId: user.clienteId || null },
+    csrfToken: csrf,
+  };
 }
 
 export async function login(req, res, next) {
@@ -63,18 +81,48 @@ export async function login(req, res, next) {
 
     await resetFailedAttempts(user.userId);
 
-    const accessToken = signAccessToken({ sub: user.userId, email: user.email, rol: user.rol, cid: user.clienteId });
-    const { token: refreshToken, jti } = signRefreshToken({ sub: user.userId });
-    await saveRefresh({ jti, userId: user.userId, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+    res.json(await issueSession(res, user));
+  } catch (err) { next(err); }
+}
 
-    const csrf = csrfTokenValue();
-    setAuthCookies(res, refreshToken, csrf);
+/** Verifica un ID token de Google y emite sesión para una cuenta gym_users ya existente. */
+export async function googleLogin(req, res, next) {
+  try {
+    if (!googleClient) {
+      return next(new HttpError(503, 'GOOGLE_AUTH_DISABLED', 'Login con Google no está configurado'));
+    }
 
-    res.json({
-      accessToken,
-      user: { id: user.userId, email: user.email, nombre: user.nombre, rol: user.rol, clienteId: user.clienteId || null },
-      csrfToken: csrf,
-    });
+    const { credential } = req.body;
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: env.GOOGLE_CLIENT_ID });
+      payload = ticket.getPayload();
+    } catch (err) {
+      logger.warn('Token de Google inválido', { reqId: req.id, error: err?.message });
+      return next(new HttpError(401, 'INVALID_GOOGLE_TOKEN', 'Token de Google inválido'));
+    }
+
+    if (!payload?.email_verified) {
+      return next(new HttpError(401, 'GOOGLE_EMAIL_UNVERIFIED', 'El correo de Google no está verificado'));
+    }
+
+    const user = await getUserByEmail(payload.email);
+    if (!user) {
+      return next(new HttpError(404, 'NO_ACCOUNT', 'No existe una cuenta para este correo. Crea una cuenta primero.'));
+    }
+
+    if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+      return next(new HttpError(423, 'ACCOUNT_LOCKED', 'Cuenta bloqueada temporalmente. Intenta más tarde.'));
+    }
+
+    if (!user.googleId) {
+      try { await linkGoogleAccount(user.userId, payload.sub); }
+      catch (err) {
+        logger.warn('No se pudo vincular googleId', { reqId: req.id, userId: user.userId, error: err?.message });
+      }
+    }
+
+    res.json(await issueSession(res, user));
   } catch (err) { next(err); }
 }
 
@@ -133,17 +181,7 @@ export async function register(req, res, next) {
     logger.info('Cliente auto-registrado', { reqId: req.id, userId: user.userId, clienteId: cliente.clienteId });
 
     // 3) Emite sesión inmediata
-    const accessToken = signAccessToken({ sub: user.userId, email: user.email, rol: user.rol, cid: cliente.clienteId });
-    const { token: refreshToken, jti } = signRefreshToken({ sub: user.userId });
-    await saveRefresh({ jti, userId: user.userId, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 });
-    const csrf = csrfTokenValue();
-    setAuthCookies(res, refreshToken, csrf);
-
-    res.status(201).json({
-      accessToken,
-      user: { id: user.userId, email: user.email, nombre: user.nombre, rol: user.rol, clienteId: cliente.clienteId },
-      csrfToken: csrf,
-    });
+    res.status(201).json(await issueSession(res, user));
   } catch (err) { next(err); }
 }
 

@@ -32,6 +32,15 @@ export async function login(email, password) {
   return parsed.user;
 }
 
+/** Login con Google — sólo funciona para cuentas ya existentes (mismo shape que login). */
+export async function loginWithGoogle(credential) {
+  const { data } = await api.post('/auth/google', { credential });
+  const parsed = loginResponseSchema.parse(data);
+  tokenStore.setAccess(parsed.accessToken);
+  tokenStore.setCsrf(parsed.csrfToken);
+  return parsed.user;
+}
+
 /** Auto-registro de CLIENTE — devuelve la sesión activa (igual que login). */
 export async function register(payload) {
   const { data } = await api.post('/auth/register', payload);

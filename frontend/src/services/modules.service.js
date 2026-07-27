@@ -24,6 +24,27 @@ export const inventarioService = {
   remove: (id)          => api.delete(`/inventario/${id}`).then(r => r.data),
 };
 
+export const gastosService = {
+  list:   ()            => api.get('/gastos').then(r => r.data),
+  create: (body)        => api.post('/gastos', body).then(r => r.data),
+  update: (id, body)    => api.put(`/gastos/${id}`, body).then(r => r.data),
+  remove: (id)          => api.delete(`/gastos/${id}`).then(r => r.data),
+};
+
+export const ingresosService = {
+  list:   ()            => api.get('/ingresos').then(r => r.data),
+  create: (body)        => api.post('/ingresos', body).then(r => r.data),
+  update: (id, body)    => api.put(`/ingresos/${id}`, body).then(r => r.data),
+  remove: (id)          => api.delete(`/ingresos/${id}`).then(r => r.data),
+};
+
+export const creditosService = {
+  list:   ()            => api.get('/creditos').then(r => r.data),
+  create: (body)        => api.post('/creditos', body).then(r => r.data),
+  update: (id, body)    => api.put(`/creditos/${id}`, body).then(r => r.data),
+  remove: (id)          => api.delete(`/creditos/${id}`).then(r => r.data),
+};
+
 export const nominaService = {
   list:   ()            => api.get('/nomina').then(r => r.data),
   create: (body)        => api.post('/nomina', body).then(r => r.data),

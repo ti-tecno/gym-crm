@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 const planEnum = z.enum(['Básico', 'Premium', 'Elite']);
 const estadoEnum = z.enum(['Activo', 'Por vencer', 'Vencido']);
+const tipoMensualidadEnum = z.enum(['Mensual', '3 Meses', '6 Meses', 'Anual']);
 
 // Helpers: aceptar strings vacíos opcionales (los normaliza a undefined antes de validar)
 const optionalString = (schema) =>
@@ -14,6 +15,7 @@ export const clienteCreateSchema = z.object({
   telefono: optionalString(z.string().regex(/^[\d\s\-()+]{7,20}$/)),
   plan: planEnum,
   monto: z.number().positive().max(100_000),
+  tipoMensualidad: tipoMensualidadEnum.optional(),
   vencimiento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // ISO yyyy-mm-dd
   objetivo: optionalString(z.string().max(60)),
   inscripcion: z.object({
