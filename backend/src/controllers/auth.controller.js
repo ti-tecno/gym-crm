@@ -4,13 +4,21 @@ import env from '../config/env.js';
 import logger from '../config/logger.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { createUser, getUserByEmail, getUserById, incrementFailedAttempts, linkGoogleAccount, lockUser, resetFailedAttempts } from '../repositories/users.repo.js';
-import { createCliente, getClienteByEmail } from '../repositories/clientes.repo.js';
+import { createCliente, getCliente, getClienteByEmail } from '../repositories/clientes.repo.js';
 import * as progreso from '../repositories/progreso.repo.js';
 import { getRefresh, revokeRefresh, saveRefresh } from '../repositories/refreshTokens.repo.js';
 import { hashPassword, verifyPassword } from '../services/password.service.js';
 import { csrfTokenValue, signAccessToken, signRefreshToken, verifyRefreshToken } from '../services/jwt.service.js';
+import { isPerfilCompleto } from '../utils/perfil.js';
 
-const PLAN_PRECIO = { 'Básico': 450, 'Premium': 850, 'Elite': 1200 };
+/** CLIENTE con perfil incompleto (registro sin cuestionario completo, p. ej. entró por Google) → false. Otros roles no aplican, siempre true. */
+async function checkPerfilCompleto(user) {
+  if (user.rol !== 'CLIENTE' || !user.clienteId) return true;
+  return isPerfilCompleto(await getCliente(user.clienteId));
+}
+
+const PLAN_PRECIO = { Mensual: 500, Estudiante: 400, Trimestre: 1450, Semestre: 2500, Anual: 2999 };
+const PLAN_MESES = { Mensual: 1, Estudiante: 1, Trimestre: 3, Semestre: 6, Anual: 12 };
 
 const REFRESH_COOKIE = 'refreshToken';
 const CSRF_COOKIE = 'csrfToken';
@@ -49,7 +57,10 @@ async function issueSession(res, user) {
 
   return {
     accessToken,
-    user: { id: user.userId, email: user.email, nombre: user.nombre, rol: user.rol, clienteId: user.clienteId || null },
+    user: {
+      id: user.userId, email: user.email, nombre: user.nombre, rol: user.rol, clienteId: user.clienteId || null,
+      perfilCompleto: await checkPerfilCompleto(user),
+    },
     csrfToken: csrf,
   };
 }
@@ -140,7 +151,7 @@ export async function register(req, res, next) {
 
     // 1) Crea el registro Cliente
     const today = new Date();
-    const venc = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    const venc = new Date(today.getFullYear(), today.getMonth() + (PLAN_MESES[plan] || 1), today.getDate());
     const cliente = await createCliente({
       nombre: apellido ? `${nombre} ${apellido}` : nombre,
       email, telefono,
@@ -237,6 +248,7 @@ export async function me(req, res, next) {
       nombre: user.nombre,
       rol: user.rol,
       clienteId: user.clienteId || null,
+      perfilCompleto: await checkPerfilCompleto(user),
     });
   } catch (err) { next(err); }
 }

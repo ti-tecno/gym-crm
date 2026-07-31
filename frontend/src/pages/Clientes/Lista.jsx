@@ -109,6 +109,7 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
             style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: '8px 12px', color: COLORS.subtle, fontSize: 13, outline: 'none' }}
           >
             <option value="">Todos los planes</option>
+            <option>Mensual</option><option>Estudiante</option><option>Trimestre</option><option>Semestre</option><option>Anual</option>
             <option>Básico</option><option>Premium</option><option>Elite</option>
           </select>
           <button
@@ -261,9 +262,14 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
                     style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: '10px 12px', color: COLORS.text, outline: 'none' }}
                   >
                     <option value="">Selecciona un plan</option>
-                    <option value="Básico">Básico</option>
-                    <option value="Premium">Premium</option>
-                    <option value="Elite">Elite</option>
+                    <option value="Mensual">Mensual</option>
+                    <option value="Estudiante">Estudiante</option>
+                    <option value="Trimestre">Trimestre</option>
+                    <option value="Semestre">Semestre</option>
+                    <option value="Anual">Anual</option>
+                    <option value="Básico">Básico (legacy)</option>
+                    <option value="Premium">Premium (legacy)</option>
+                    <option value="Elite">Elite (legacy)</option>
                   </select>
                 </label>
                 <label style={{ display: 'grid', gap: 6 }}>

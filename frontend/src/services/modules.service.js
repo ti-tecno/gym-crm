@@ -55,7 +55,9 @@ export const rutinasService = {
   listClientes:  ()           => api.get('/rutinas/clientes').then(r => r.data),
   upsertCliente: (body)       => api.post('/rutinas/clientes', body).then(r => r.data),
   listCoach:     ()           => api.get('/rutinas/coach').then(r => r.data),
-  upsertCoach:   (body)       => api.post('/rutinas/coach', body).then(r => r.data),
+  createCoach:   (body)       => api.post('/rutinas/coach', body).then(r => r.data),
+  updateCoach:   (id, body)   => api.put(`/rutinas/coach/${id}`, body).then(r => r.data),
+  removeCoach:   (id)         => api.delete(`/rutinas/coach/${id}`).then(r => r.data),
 };
 
 export const recordatoriosService = {

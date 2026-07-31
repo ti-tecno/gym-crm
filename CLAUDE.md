@@ -9,7 +9,7 @@ IronCore is a gym management system: a monorepo with a Node.js/Express backend (
 **Tech Stack:**
 - **Backend**: Node.js 20+, Express, AWS DynamoDB (or DynamoDB Local), JWT RS256, Zod, Helmet, Winston; uses ES modules (`"type": "module"`)
 - **Frontend**: React 18.3, Vite 5, React Router DOM, React Hook Form, Zod, DOMPurify, Axios; uses ES modules
-- **Auth**: RS256 asymmetric JWT; access token (15 min) + refresh token (7 days, httpOnly cookie, rotated on every refresh)
+- **Auth**: RS256 asymmetric JWT; access token (15 min) + refresh token (7 days, httpOnly cookie, rotated on every refresh); optional Google OAuth login layered on top of the same session issuance
 - **RBAC Roles**: `ADMIN`, `COACH`, `RECEP` (staff portals), `CLIENTE` (member portal)
 
 ## Quick Start
@@ -82,6 +82,7 @@ scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js, import
 - DynamoDB queries always use `ExpressionAttributeNames` + `ExpressionAttributeValues` (no interpolation). Import `ddb` and `TABLES` from `config/dynamo.js`.
 - All endpoints have a Zod schema applied at the middleware layer via `validate(schema)`
 - Failed login attempts tracked; account locked after 5 failures for 15 min; bcrypt saltRounds=12
+- Google OAuth (`auth.controller.js`'s `googleLogin`): verifies the ID token server-side with `google-auth-library` against `GOOGLE_CLIENT_ID`, requires `email_verified`, then looks up the existing `gym_users` record by email — it never creates accounts, so users must register (password or manually) before "Sign in with Google" works. On first successful Google login it opportunistically sets `googleId`/`oauthProvider` on the user via `linkGoogleAccount` (`users.repo.js`); this link is best-effort and failures are only logged, not fatal. Gated by a dedicated `googleAuthLimiter` (`middleware/rateLimiter.js`) and by `googleClient` being non-null (i.e. `GOOGLE_CLIENT_ID` set) — otherwise the endpoint returns 503 `GOOGLE_AUTH_DISABLED`.
 - Logs via Winston with automatic redaction of `password`, `token`, `cc` fields
 - `HttpError(status, code, message)` is the standard way to pass errors to `next()`
 - File uploads (`upload.routes.js`/`upload.controller.js`) use `multer` disk storage, writing to `backend/public/uploads/<category>/` (currently coach images) with a mime allowlist and 5MB limit; served as static files from `backend/public/`
@@ -108,6 +109,7 @@ constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITE
 - CSRF double-submit: `csrfToken` cookie is readable by JS (not httpOnly) so the client reads it and sends it as `X-CSRF-Token` header on mutating requests
 - All dynamic HTML passes through DOMPurify (`utils/sanitize.js`) before render
 - Forms: React Hook Form + Zod resolver
+- Google OAuth: `main.jsx` wraps the app in `GoogleOAuthProvider` (from `@react-oauth/google`) keyed by `VITE_GOOGLE_CLIENT_ID`; `Login.jsx` renders the Google button and `auth.service.js`'s `googleLogin()` posts the credential to `POST /auth/google` — same session/cookie flow as password login from there on
 
 ### Data Model (DynamoDB tables, prefix `gym_`)
 
@@ -187,7 +189,9 @@ See `backend/.env.example` for all variables. Critical ones:
 | `JWT_PUBLIC_KEY_PATH` | Path to RS256 public key |
 | `CORS_ORIGINS` | Comma-separated allowed origins |
 | `COOKIE_SECURE` | Set `true` in production (HTTPS only) |
+| `GOOGLE_CLIENT_ID` | (backend, optional) Google OAuth client ID; omitting it disables `POST /auth/google` (returns 503) |
 | `VITE_API_URL` | (frontend) Backend base URL |
+| `VITE_GOOGLE_CLIENT_ID` | (frontend, optional) Must match backend `GOOGLE_CLIENT_ID` for the Google login button to work |
 
 ## Security Notes
 

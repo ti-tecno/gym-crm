@@ -41,6 +41,10 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  const markProfileComplete = useCallback(() => {
+    setUser((u) => (u ? { ...u, perfilCompleto: true } : u));
+  }, []);
+
   const hasRole = useCallback((...roles) => !!user && roles.includes(user.rol), [user]);
 
   /** Devuelve true si el access token está vigente (con margen de 10s). */
@@ -53,8 +57,8 @@ export function AuthProvider({ children }) {
     } catch { return false; }
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, register, loginWithGoogle, logout, hasRole, isAccessValid }),
-    [user, loading, login, register, loginWithGoogle, logout, hasRole, isAccessValid]);
+  const value = useMemo(() => ({ user, loading, login, register, loginWithGoogle, logout, hasRole, isAccessValid, markProfileComplete }),
+    [user, loading, login, register, loginWithGoogle, logout, hasRole, isAccessValid, markProfileComplete]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

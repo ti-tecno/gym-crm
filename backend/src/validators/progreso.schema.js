@@ -5,7 +5,6 @@ const dateIso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha YYYY-MM-DD');
 const serieSchema = z.object({
   reps:  z.number().int().nonnegative().max(500),
   peso:  z.number().nonnegative().max(1000),       // kg
-  rpe:   z.number().min(1).max(10).optional(),     // Rate of Perceived Exertion
   completada: z.boolean().default(true),
 });
 

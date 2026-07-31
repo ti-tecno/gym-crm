@@ -1,4 +1,4 @@
-import { GetCommand, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, GetCommand, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { v4 as uuid } from 'uuid';
 import { ddb, TABLES } from '../config/dynamo.js';
 
@@ -13,7 +13,7 @@ export async function getRutinaCliente(id) {
 }
 
 export async function upsertRutinaCliente(data) {
-  const item = { rutinaId: data.rutinaId || uuid(), updatedAt: new Date().toISOString(), ...data };
+  const item = { ...data, rutinaId: data.rutinaId || uuid(), updatedAt: new Date().toISOString() };
   await ddb.send(new PutCommand({ TableName: TABLES.RUTINAS_CLIENTES, Item: item }));
   return item;
 }
@@ -23,8 +23,28 @@ export async function listRutinasCoach() {
   return Items;
 }
 
-export async function upsertRutinaCoach(data) {
-  const item = { rutinaId: data.rutinaId || uuid(), updatedAt: new Date().toISOString(), ...data };
+export async function getRutinaCoach(id) {
+  const { Item } = await ddb.send(new GetCommand({ TableName: TABLES.RUTINAS_COACH, Key: { rutinaId: id } }));
+  return Item || null;
+}
+
+export async function createRutinaCoach(data) {
+  const item = { rutinaId: uuid(), updatedAt: new Date().toISOString(), ...data };
   await ddb.send(new PutCommand({ TableName: TABLES.RUTINAS_COACH, Item: item }));
   return item;
+}
+
+export async function updateRutinaCoach(id, patch) {
+  const current = await getRutinaCoach(id);
+  if (!current) return null;
+  const next = { ...current, ...patch, updatedAt: new Date().toISOString() };
+  await ddb.send(new PutCommand({ TableName: TABLES.RUTINAS_COACH, Item: next }));
+  return next;
+}
+
+export async function deleteRutinaCoach(id) {
+  await ddb.send(new DeleteCommand({
+    TableName: TABLES.RUTINAS_COACH, Key: { rutinaId: id },
+    ConditionExpression: 'attribute_exists(rutinaId)',
+  }));
 }

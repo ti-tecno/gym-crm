@@ -39,4 +39,5 @@ export const CLIENTE_NAV_ITEMS = [
   { id: 'mi-diario',     to: '/mi/diario',     icon: '✎', label: 'Diario' },
   { id: 'mis-medidas',   to: '/mi/medidas',    icon: '◐', label: 'Medidas' },
   { id: 'mi-progreso',   to: '/mi/progreso',   icon: '◎', label: 'Progreso' },
+  { id: 'mi-perfil',     to: '/mi/completar-perfil', icon: '☺', label: 'Mi Perfil' },
 ];

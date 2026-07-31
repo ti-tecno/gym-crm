@@ -52,6 +52,7 @@ const inscripcionSchema = z.object({
     tiempoSesion: optionalString(z.string().trim().max(40)),
     ultimaVezPrograma: optionalString(z.string().trim().max(80)),
     beneficios: z.array(z.string().trim().max(60)).max(8).optional(),
+    aceptoPrivacidad: z.boolean().optional(),
     aceptoResponsiva: z.boolean(),
   }).optional(),
 });
@@ -66,6 +67,6 @@ export const registerSchema = z.object({
     .regex(/[A-Z]/, 'Debe incluir mayúscula')
     .regex(/[a-z]/, 'Debe incluir minúscula')
     .regex(/\d/,    'Debe incluir número'),
-  plan: z.enum(['Básico', 'Premium', 'Elite']),
+  plan: z.enum(['Mensual', 'Estudiante', 'Trimestre', 'Semestre', 'Anual']),
   inscripcion: inscripcionSchema,
 });

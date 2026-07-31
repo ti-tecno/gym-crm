@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/layout/Layout.jsx";
 import ClienteLayout from "./components/layout/ClienteLayout.jsx";
 import ProtectedRoute from "./guards/ProtectedRoute.jsx";
+import RequireProfileComplete from "./guards/RequireProfileComplete.jsx";
 import { ROLES, STAFF_ROLES } from "./constants/theme.js";
 import { useAuth } from "./context/AuthContext.jsx";
 
@@ -28,6 +29,7 @@ import MisRutinas from "./pages/Cliente/MisRutinas.jsx";
 import Diario from "./pages/Cliente/Diario.jsx";
 import Medidas from "./pages/Cliente/Medidas.jsx";
 import Progreso from "./pages/Cliente/Progreso.jsx";
+import CompletarPerfil from "./pages/Cliente/CompletarPerfil.jsx";
 
 /** Muestra el landing si no hay sesión; redirige al portal según rol si ya está autenticado. */
 function HomeRedirect() {
@@ -129,7 +131,9 @@ export default function App() {
       <Route
         element={
           <ProtectedRoute roles={[ROLES.CLIENTE]}>
-            <ClienteLayout />
+            <RequireProfileComplete>
+              <ClienteLayout />
+            </RequireProfileComplete>
           </ProtectedRoute>
         }
       >
@@ -139,6 +143,7 @@ export default function App() {
         <Route path="/mi/diario" element={<Diario />} />
         <Route path="/mi/medidas" element={<Medidas />} />
         <Route path="/mi/progreso" element={<Progreso />} />
+        <Route path="/mi/completar-perfil" element={<CompletarPerfil />} />
       </Route>
 
       <Route path="/" element={<HomeRedirect />} />

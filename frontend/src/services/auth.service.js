@@ -11,6 +11,7 @@ const loginResponseSchema = z.object({
     nombre: z.string(),
     rol: z.enum(['ADMIN', 'COACH', 'RECEP', 'CLIENTE']),
     clienteId: z.string().nullable().optional(),
+    perfilCompleto: z.boolean().optional().default(true),
   }),
 });
 
@@ -22,6 +23,7 @@ const meSchema = z.object({
   nombre: z.string(),
   rol: ROLE,
   clienteId: z.string().nullable().optional(),
+  perfilCompleto: z.boolean().optional().default(true),
 });
 
 export async function login(email, password) {

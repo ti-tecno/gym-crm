@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-const planEnum = z.enum(['Básico', 'Premium', 'Elite']);
+// Incluye los planes vigentes (Mensual/Estudiante/Trimestre/Semestre/Anual) más los
+// nombres legacy (Básico/Premium/Elite) para no invalidar clientes ya existentes con
+// ese plan asignado — su precio histórico no se toca, solo se relee con su nombre original.
+const planEnum = z.enum(['Mensual', 'Estudiante', 'Trimestre', 'Semestre', 'Anual', 'Básico', 'Premium', 'Elite']);
 const estadoEnum = z.enum(['Activo', 'Por vencer', 'Vencido']);
 const tipoMensualidadEnum = z.enum(['Mensual', '3 Meses', '6 Meses', 'Anual']);
 

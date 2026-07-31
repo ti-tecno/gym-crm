@@ -9,9 +9,11 @@ import { clientesService } from '../../services/modules.service.js';
 import { initials } from '../../utils/format.js';
 
 const PLANES = [
-  { id: 'Básico',  precio: 450,  color: COLORS.blue,   features: ['Acceso Lun–Vie', 'Área de pesas', 'Casillero'] },
-  { id: 'Premium', precio: 850,  color: COLORS.accent, popular: true, features: ['Acceso 7 días', 'Clases grupales', '1 sesión coach/mes', 'Casillero'] },
-  { id: 'Elite',   precio: 1200, color: COLORS.purple, features: ['Acceso 24/7', 'Clases ilimitadas', 'Coach personal', 'Nutrición', 'Casillero VIP'] },
+  { id: 'Mensual',    precio: 500,  periodo: 'mes',      meses: 1,  color: COLORS.blue,   features: ['Acceso completo al gimnasio', 'Vestidores y casilleros', 'Horario completo'] },
+  { id: 'Estudiante', precio: 400,  periodo: 'mes',      meses: 1,  color: COLORS.green,  features: ['Acceso completo al gimnasio', 'Válido con credencial de estudiante', 'Vestidores y casilleros'] },
+  { id: 'Trimestre',  precio: 1450, periodo: 'trimestre', meses: 3, color: COLORS.accent, popular: true, features: ['Todo lo del plan Mensual', 'Ahorra vs. pagar mes a mes', 'Acceso a clases grupales'] },
+  { id: 'Semestre',   precio: 2500, periodo: 'semestre',  meses: 6, color: COLORS.purple, features: ['Todo lo del plan Trimestre', 'Mayor ahorro por mes', 'Asesoría nutricional básica'] },
+  { id: 'Anual',      precio: 2999, periodo: 'año',       meses: 12, color: '#E8A33D',    features: ['Todo lo del plan Semestre', 'El mejor precio por mes', 'Plan de entrenamiento personalizado'] },
 ];
 
 const schema = z.object({
@@ -24,7 +26,7 @@ const schema = z.object({
 
 export default function RegistroAutonomo() {
   const [step, setStep] = useState(1);
-  const [planSel, setPlanSel] = useState('Premium');
+  const [planSel, setPlanSel] = useState('Trimestre');
   const [done, setDone] = useState(false);
   const [serverError, setServerError] = useState('');
 
@@ -37,15 +39,16 @@ export default function RegistroAutonomo() {
     setServerError('');
     const v = getValues();
     try {
+      const planElegido = PLANES.find((p) => p.id === planSel);
       const today = new Date();
-      const venc = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+      const venc = new Date(today.getFullYear(), today.getMonth() + planElegido.meses, today.getDate());
 
       // Construimos el payload limpiando strings vacíos para que el backend los trate como opcionales.
       const payload = {
         nombre: v.nombre.trim(),
         email: v.email.trim().toLowerCase(),
         plan: planSel,
-        monto: PLANES.find((p) => p.id === planSel).precio,
+        monto: planElegido.precio,
         vencimiento: venc.toISOString().slice(0, 10),
         estado: 'Activo',
       };
@@ -115,7 +118,7 @@ export default function RegistroAutonomo() {
       {step === 1 && (
         <div>
           <h3 style={{ color: COLORS.text, fontFamily: "'Barlow Condensed',sans-serif", fontSize: 24, fontWeight: 800, marginBottom: 20 }}>Elige tu Plan</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
             {PLANES.map((p) => (
               <div key={p.id} onClick={() => setPlanSel(p.id)} style={{
                 background: planSel === p.id ? `${p.color}14` : COLORS.card,
@@ -129,7 +132,7 @@ export default function RegistroAutonomo() {
                 )}
                 <div style={{ color: p.color, fontFamily: "'Barlow Condensed',sans-serif", fontSize: 22, fontWeight: 800 }}>{p.id}</div>
                 <div style={{ color: COLORS.text, fontFamily: "'DM Mono',monospace", fontSize: 26, fontWeight: 700, margin: '8px 0 16px' }}>
-                  ${p.precio}<span style={{ fontSize: 12, color: COLORS.muted }}>/mes</span>
+                  ${p.precio}<span style={{ fontSize: 12, color: COLORS.muted }}>/{p.periodo}</span>
                 </div>
                 {p.features.map((f, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -203,7 +206,7 @@ export default function RegistroAutonomo() {
               </div>
               {[
                 ['Plan', planSel],
-                ['Mensualidad', '$' + plan.precio],
+                ['Precio', `$${plan.precio} / ${plan.periodo}`],
                 ['WhatsApp', v.telefono || '—'],
                 ['Objetivo', v.objetivo || '—'],
               ].map(([k, val]) => (

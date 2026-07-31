@@ -17,40 +17,89 @@ import { settingsService } from "../services/modules.service.js";
 
 const PLANS = [
   {
-    nombre: "Básico",
-    precio: 450,
+    nombre: "Mensual",
+    precio: 500,
+    periodo: "mes",
     features: [
-      "Acceso a todas las máquinas",
+      "Acceso completo al gimnasio",
       "Vestidores y casilleros",
       "Horario completo",
-      "Evaluación inicial",
+      "Sin permanencia mínima",
     ],
     color: COLORS.blue,
     destacado: false,
   },
   {
-    nombre: "Premium",
-    precio: 850,
+    nombre: "Estudiante",
+    precio: 400,
+    periodo: "mes",
     features: [
-      "Todo lo del plan Básico",
-      "Clases grupales ilimitadas",
-      "App de seguimiento",
-      "Asesoría nutricional básica",
+      "Acceso completo al gimnasio",
+      "Válido con credencial de estudiante vigente",
+      "Vestidores y casilleros",
+      "Horario completo",
+    ],
+    color: COLORS.green,
+    destacado: false,
+  },
+  {
+    nombre: "Trimestre",
+    precio: 1450,
+    periodo: "trimestre",
+    features: [
+      "Todo lo del plan Mensual",
+      "Ahorra vs. pagar mes a mes",
+      "Evaluación física inicial",
+      "Acceso a clases grupales",
     ],
     color: COLORS.accent,
     destacado: true,
   },
   {
-    nombre: "Elite",
-    precio: 1200,
+    nombre: "Semestre",
+    precio: 2500,
+    periodo: "semestre",
     features: [
-      "Todo lo del plan Premium",
-      "Coach personal dedicado",
-      "Plan nutricional personalizado",
-      "Suplementos con 10% dto",
+      "Todo lo del plan Trimestre",
+      "Mayor ahorro por mes",
+      "Seguimiento de progreso",
+      "Asesoría nutricional básica",
     ],
     color: COLORS.purple,
     destacado: false,
+  },
+  {
+    nombre: "Anual",
+    precio: 2999,
+    periodo: "anualidad",
+    features: [
+      "Todo lo del plan Semestre",
+      "El mejor precio por mes",
+      "Plan de entrenamiento personalizado",
+      "Congelamiento de membresía disponible",
+    ],
+    color: "#E8A33D",
+    destacado: false,
+  },
+];
+
+const PROMOTIONS = [
+  {
+    nombre: "3x2 en Membresía",
+    descripcion: "Paga 2 meses y llévate el tercero gratis.",
+    precio: 999,
+    periodo: "3 meses",
+    badge: "3X2",
+    color: COLORS.accent,
+  },
+  {
+    nombre: "Promo Pareja",
+    descripcion:
+      "Inscríbete junto a tu pareja y ambos entrenan con descuento especial.",
+    precio: 950,
+    periodo: "mes (los dos)",
+    badge: "PAREJA",
+    color: COLORS.purple,
   },
 ];
 
@@ -188,6 +237,7 @@ export default function LandingPage() {
   const [coachIndex, setCoachIndex] = useState(0);
 
   const [plans, setPlans] = useState(PLANS);
+  const [promotions, setPromotions] = useState(PROMOTIONS);
   const [coaches, setCoaches] = useState(COACHES);
   const [sched, setSched] = useState({
     days: DAYS,
@@ -199,6 +249,8 @@ export default function LandingPage() {
     settingsService.public().then((data) => {
       if (Array.isArray(data.packages) && data.packages.length > 0)
         setPlans(data.packages);
+      if (Array.isArray(data.promotions) && data.promotions.length > 0)
+        setPromotions(data.promotions);
       if (Array.isArray(data.coaches) && data.coaches.length > 0)
         setCoaches(data.coaches);
       if (data.schedule?.days?.length && data.schedule?.slots?.length)
@@ -2134,6 +2186,142 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── PROMOCIONES ────────────────────────────────────── */}
+      {promotions.length > 0 && (
+        <section
+          id="promociones"
+          style={{ position: "relative", zIndex: 1, padding: "0 48px 100px" }}
+          className="ic-section-pad"
+        >
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <div
+              className="ic-reveal"
+              style={{ textAlign: "center", marginBottom: 48 }}
+            >
+              <p
+                style={{
+                  fontFamily: "DM Mono, monospace",
+                  fontSize: 10,
+                  letterSpacing: 4,
+                  color: COLORS.accent,
+                  textTransform: "uppercase",
+                  marginBottom: 12,
+                }}
+              >
+                OFERTAS ESPECIALES
+              </p>
+              <h2
+                style={{
+                  fontFamily: "Barlow Condensed, sans-serif",
+                  fontSize: "clamp(32px, 5vw, 48px)",
+                  fontWeight: 800,
+                  textTransform: "uppercase",
+                  letterSpacing: "-1px",
+                  color: COLORS.text,
+                  margin: 0,
+                }}
+              >
+                PROMOCIONES VIGENTES
+              </h2>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: 24,
+              }}
+            >
+              {promotions.map((promo, i) => (
+                <div
+                  key={promo.id ?? i}
+                  className="ic-plan-card ic-reveal"
+                  style={{
+                    background: `${COLORS.card}cc`,
+                    border: `1px solid ${promo.color || COLORS.accent}`,
+                    borderRadius: 24,
+                    padding: "32px",
+                    position: "relative",
+                    overflow: "hidden",
+                    transitionDelay: `${i * 0.1}s`,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 16,
+                  }}
+                >
+                  {promo.badge && (
+                    <span
+                      style={{
+                        alignSelf: "flex-start",
+                        background: `${(promo.color || COLORS.accent)}20`,
+                        border: `1px solid ${promo.color || COLORS.accent}50`,
+                        color: promo.color || COLORS.accent,
+                        fontFamily: "Barlow Condensed, sans-serif",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        letterSpacing: 2,
+                        padding: "4px 12px",
+                        borderRadius: 999,
+                      }}
+                    >
+                      {promo.badge}
+                    </span>
+                  )}
+                  <h3
+                    style={{
+                      fontFamily: "Barlow Condensed, sans-serif",
+                      fontSize: 26,
+                      fontWeight: 800,
+                      textTransform: "uppercase",
+                      letterSpacing: 1,
+                      color: COLORS.text,
+                      margin: 0,
+                    }}
+                  >
+                    {promo.nombre}
+                  </h3>
+                  <p
+                    style={{
+                      color: COLORS.subtle,
+                      fontSize: 14,
+                      lineHeight: 1.5,
+                      margin: 0,
+                    }}
+                  >
+                    {promo.descripcion}
+                  </p>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                    <span
+                      style={{
+                        color: COLORS.muted,
+                        fontFamily: "Barlow Condensed, sans-serif",
+                        fontSize: 16,
+                      }}
+                    >
+                      $
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "Barlow Condensed, sans-serif",
+                        fontSize: 40,
+                        fontWeight: 800,
+                        color: promo.color || COLORS.accent,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {promo.precio}
+                    </span>
+                    <span style={{ color: COLORS.muted, fontSize: 13 }}>
+                      /{promo.periodo ?? "mes"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── FINAL CTA ──────────────────────────────────────── */}
       <section

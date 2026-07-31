@@ -18,19 +18,9 @@ const loginSchema = z.object({
 const registerSchema = z
   .object({
     nombre: z.string().trim().min(2, "Mínimo 2").max(60),
-    apellido: z
-      .string()
-      .trim()
-      .min(2, "Mínimo 2")
-      .max(60)
-      .optional()
-      .or(z.literal("")),
+    apellido: z.string().trim().min(2, "Mínimo 2").max(60),
     email: z.string().email("Email inválido").max(120),
-    telefono: z
-      .string()
-      .regex(/^[\d\s\-()+]{7,20}$/, "Teléfono inválido")
-      .optional()
-      .or(z.literal("")),
+    telefono: z.string().regex(/^[\d\s\-()+]{7,20}$/, "Teléfono inválido"),
     password: z
       .string()
       .min(8, "Mínimo 8 caracteres")
@@ -39,22 +29,25 @@ const registerSchema = z
       .regex(/[a-z]/, "Incluye una minúscula")
       .regex(/\d/, "Incluye un número"),
     confirm: z.string().min(8).max(128),
-    plan: z.enum(["Básico", "Premium", "Elite"]),
-    fechaNacimiento: z.string().optional(),
-    edad: z.string().optional(),
-    genero: z.enum(["H", "M", "Otro"]).optional().or(z.literal("")),
+    plan: z.enum(["Mensual", "Estudiante", "Trimestre", "Semestre", "Anual"]),
+    fechaNacimiento: z.string().min(1, "Requerido"),
+    edad: z.string().min(1, "Requerido"),
+    genero: z.enum(["H", "M", "Otro"], {
+      errorMap: () => ({ message: "Requerido" }),
+    }),
     estudiante: z.boolean().optional(),
+    // Sólo obligatoria si "estudiante" es Sí — ver superRefine
     matricula: z.string().max(40).optional().or(z.literal("")),
-    peso: z.string().optional(),
-    grupoSanguineo: z.string().max(12).optional().or(z.literal("")),
-    alergiaMedicamentos: z.string().max(120).optional().or(z.literal("")),
-    emergenciaNombre: z.string().max(60).optional().or(z.literal("")),
-    emergenciaParentesco: z.string().max(40).optional().or(z.literal("")),
+    peso: z.string().min(1, "Requerido"),
+    grupoSanguineo: z.string().trim().min(1, "Requerido").max(12),
+    alergiaTiene: z.enum(["si", "no"], { errorMap: () => ({ message: "Requerido" }) }),
+    // Sólo obligatorio si "alergiaTiene" es "si" — ver superRefine
+    alergiaDetalle: z.string().trim().max(120).optional().or(z.literal("")),
+    emergenciaNombre: z.string().trim().min(2, "Mínimo 2").max(60),
+    emergenciaParentesco: z.string().trim().min(2, "Mínimo 2").max(40),
     emergenciaTelefono: z
       .string()
-      .regex(/^[\d\s\-()+]{7,20}$/, "Teléfono inválido")
-      .optional()
-      .or(z.literal("")),
+      .regex(/^[\d\s\-()+]{7,20}$/, "Teléfono inválido"),
     cardiaco: z.boolean().optional(),
     pecho: z.boolean().optional(),
     ahogo: z.boolean().optional(),
@@ -63,21 +56,93 @@ const registerSchema = z
     respiratorio: z.boolean().optional(),
     osteoarticular: z.boolean().optional(),
     dolorReciente: z.boolean().optional(),
-    factoresRiesgo: z.string().max(240).optional().or(z.literal("")),
-    medicamentoActual: z.string().max(240).optional().or(z.literal("")),
-    otroPadecimiento: z.string().max(240).optional().or(z.literal("")),
+    factoresRiesgo: z
+      .string()
+      .trim()
+      .min(1, "Requerido, escribe 'Ninguno' si no aplica")
+      .max(240),
+    medicamentoTiene: z.enum(["si", "no"], { errorMap: () => ({ message: "Requerido" }) }),
+    // Sólo obligatorio si "medicamentoTiene" es "si" — ver superRefine
+    medicamentoDetalle: z.string().trim().max(240).optional().or(z.literal("")),
+    otroPadecimientoTiene: z.enum(["si", "no"], { errorMap: () => ({ message: "Requerido" }) }),
+    // Sólo obligatorio si "otroPadecimientoTiene" es "si", u obligatorio "si" si alguna
+    // condición de salud está marcada — ver superRefine
+    otroPadecimientoDetalle: z.string().trim().max(240).optional().or(z.literal("")),
     actividadHabitual: z.boolean().optional(),
+    // Sólo obligatorias si "actividadHabitual" es Sí — ver superRefine
     actividadTipo: z.string().max(80).optional().or(z.literal("")),
     frecuenciaSemanal: z.string().optional(),
     tiempoSesion: z.string().max(40).optional().or(z.literal("")),
-    ultimaVezPrograma: z.string().max(80).optional().or(z.literal("")),
-    beneficios: z.array(z.string()).optional(),
+    ultimaVezPrograma: z.string().trim().min(1, "Requerido").max(80),
+    beneficios: z.array(z.string()).min(1, "Selecciona al menos un beneficio"),
     aceptoPrivacidad: z.boolean().refine(Boolean, "Debes aceptar el aviso de privacidad"),
     aceptoResponsiva: z.boolean().refine(Boolean, "Debes aceptar la responsiva"),
   })
   .refine((d) => d.password === d.confirm, {
     path: ["confirm"],
     message: "No coinciden",
+  })
+  .superRefine((d, ctx) => {
+    if (d.estudiante && !d.matricula?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["matricula"],
+        message: "Requerido si eres estudiante",
+      });
+    }
+    if (d.alergiaTiene === "si" && !d.alergiaDetalle?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["alergiaDetalle"],
+        message: "Especifica la alergia",
+      });
+    }
+    if (d.medicamentoTiene === "si" && !d.medicamentoDetalle?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["medicamentoDetalle"],
+        message: "Especifica el medicamento y dosis",
+      });
+    }
+    if (d.actividadHabitual) {
+      if (!d.actividadTipo?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["actividadTipo"],
+          message: "Requerido si practicas actividad física",
+        });
+      }
+      if (!d.frecuenciaSemanal?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["frecuenciaSemanal"],
+          message: "Requerido si practicas actividad física",
+        });
+      }
+      if (!d.tiempoSesion?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["tiempoSesion"],
+          message: "Requerido si practicas actividad física",
+        });
+      }
+    }
+    const tieneCondicionSalud =
+      d.cardiaco ||
+      d.pecho ||
+      d.ahogo ||
+      d.mareo ||
+      d.neurologico ||
+      d.respiratorio ||
+      d.osteoarticular ||
+      d.dolorReciente;
+    if (tieneCondicionSalud && !d.otroPadecimiento?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["otroPadecimiento"],
+        message: "Describe la condición marcada arriba",
+      });
+    }
   });
 
 // ── Rate limit cliente: 3 intentos / 60s ──
@@ -96,9 +161,11 @@ function attemptsLeft() {
 }
 
 const PLANES = [
-  { id: "Básico", precio: 450, color: COLORS.blue },
-  { id: "Premium", precio: 850, color: COLORS.accent },
-  { id: "Elite", precio: 1200, color: COLORS.purple },
+  { id: "Mensual", precio: 500, periodo: "mes", color: COLORS.blue },
+  { id: "Estudiante", precio: 400, periodo: "mes", color: COLORS.green },
+  { id: "Trimestre", precio: 1450, periodo: "trimestre", color: COLORS.accent },
+  { id: "Semestre", precio: 2500, periodo: "semestre", color: COLORS.purple },
+  { id: "Anual", precio: 2999, periodo: "año", color: "#E8A33D" },
 ];
 
 const BENEFICIOS = [
@@ -149,7 +216,8 @@ const STEP_1_FIELDS = [
 
 const STEP_2_FIELDS = [
   "grupoSanguineo",
-  "alergiaMedicamentos",
+  "alergiaTiene",
+  "alergiaDetalle",
   "emergenciaNombre",
   "emergenciaParentesco",
   "emergenciaTelefono",
@@ -188,7 +256,7 @@ export default function Login() {
   const [mode, setMode] = useState("login"); // 'login' | 'register'
   const [serverError, setServerError] = useState("");
   const [googleError, setGoogleError] = useState("");
-  const [planSel, setPlanSel] = useState("Premium");
+  const [planSel, setPlanSel] = useState("Trimestre");
   const [registerStep, setRegisterStep] = useState(1);
 
   const { login, register: doRegister, loginWithGoogle } = useAuth();
@@ -211,7 +279,7 @@ export default function Login() {
       telefono: "",
       password: "",
       confirm: "",
-      plan: "Premium",
+      plan: "Trimestre",
       fechaNacimiento: "",
       edad: "",
       genero: "",
@@ -219,7 +287,8 @@ export default function Login() {
       matricula: "",
       peso: "",
       grupoSanguineo: "",
-      alergiaMedicamentos: "",
+      alergiaTiene: "",
+      alergiaDetalle: "",
       emergenciaNombre: "",
       emergenciaParentesco: "",
       emergenciaTelefono: "",
@@ -312,7 +381,7 @@ export default function Login() {
           peso: parseOptionalNumber(data.peso),
           matricula: data.matricula?.trim() || undefined,
           grupoSanguineo: data.grupoSanguineo?.trim() || undefined,
-          alergiaMedicamentos: data.alergiaMedicamentos?.trim() || undefined,
+          alergiaMedicamentos: data.alergiaTiene === "si" ? data.alergiaDetalle?.trim() || undefined : "Ninguna",
           emergencia: {
             nombre: data.emergenciaNombre?.trim() || undefined,
             parentesco: data.emergenciaParentesco?.trim() || undefined,
@@ -704,13 +773,13 @@ export default function Login() {
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <FInput
-                    label="Nombre"
+                    label="Nombre *"
                     placeholder="Juan"
                     {...regForm.register("nombre")}
                     error={regForm.formState.errors.nombre?.message}
                   />
                   <FInput
-                    label="Apellido"
+                    label="Apellido *"
                     placeholder="García"
                     {...regForm.register("apellido")}
                     error={regForm.formState.errors.apellido?.message}
@@ -719,14 +788,14 @@ export default function Login() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <FInput
-                    label="Email"
+                    label="Email *"
                     placeholder="correo@ejemplo.com"
                     type="email"
                     {...regForm.register("email")}
                     error={regForm.formState.errors.email?.message}
                   />
                   <FInput
-                    label="WhatsApp"
+                    label="WhatsApp *"
                     placeholder="555-000-0000"
                     {...regForm.register("telefono")}
                     error={regForm.formState.errors.telefono?.message}
@@ -735,20 +804,20 @@ export default function Login() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1.1fr .8fr .8fr", gap: 12 }}>
                   <FInput
-                    label="Fecha de nacimiento"
+                    label="Fecha de nacimiento *"
                     type="date"
                     {...regForm.register("fechaNacimiento")}
                     error={regForm.formState.errors.fechaNacimiento?.message}
                   />
                   <FInput
-                    label="Edad"
+                    label="Edad *"
                     type="number"
                     inputMode="numeric"
                     {...regForm.register("edad")}
                     error={regForm.formState.errors.edad?.message}
                   />
                   <FInput
-                    label="Peso (kg)"
+                    label="Peso (kg) *"
                     type="number"
                     inputMode="decimal"
                     {...regForm.register("peso")}
@@ -767,13 +836,13 @@ export default function Login() {
                         fontFamily: "'DM Mono',monospace",
                       }}
                     >
-                      Género
+                      Género *
                     </label>
                     <select
                       {...regForm.register("genero")}
                       style={{
                         background: COLORS.surface,
-                        border: `1px solid ${COLORS.border}`,
+                        border: `1px solid ${regForm.formState.errors.genero ? COLORS.red : COLORS.border}`,
                         borderRadius: 9,
                         padding: "10px 14px",
                         color: COLORS.text,
@@ -789,6 +858,11 @@ export default function Login() {
                         </option>
                       ))}
                     </select>
+                    {regForm.formState.errors.genero?.message && (
+                      <span style={{ color: COLORS.red, fontSize: 11 }}>
+                        {regForm.formState.errors.genero.message}
+                      </span>
+                    )}
                   </div>
 
                   <label
@@ -834,7 +908,7 @@ export default function Login() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <FInput
                     label="Matrícula"
-                    placeholder="Opcional"
+                    placeholder="Obligatoria si eres estudiante"
                     {...regForm.register("matricula")}
                     error={regForm.formState.errors.matricula?.message}
                   />
@@ -867,7 +941,7 @@ export default function Login() {
                   </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 8 }}>
                   {PLANES.map((p) => {
                     const on = planSel === p.id;
                     return (
@@ -894,7 +968,7 @@ export default function Login() {
                             marginTop: 2,
                           }}
                         >
-                          ${p.precio}/mes
+                          ${p.precio}/{p.periodo}
                         </div>
                       </button>
                     );
@@ -926,34 +1000,91 @@ export default function Login() {
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <FInput
-                    label="Grupo sanguíneo"
+                    label="Grupo sanguíneo *"
                     placeholder="O+, A-, etc."
                     {...regForm.register("grupoSanguineo")}
                     error={regForm.formState.errors.grupoSanguineo?.message}
                   />
-                  <FInput
-                    label="Alergia a medicamentos"
-                    placeholder="Describe si aplica"
-                    {...regForm.register("alergiaMedicamentos")}
-                    error={regForm.formState.errors.alergiaMedicamentos?.message}
-                  />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label
+                      style={{
+                        color: COLORS.muted,
+                        fontSize: 11,
+                        letterSpacing: 1.5,
+                        textTransform: "uppercase",
+                        fontFamily: "'DM Mono',monospace",
+                      }}
+                    >
+                      ¿Alergia a medicamentos? *
+                    </label>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          flex: 1,
+                          background: COLORS.surface,
+                          border: `1px solid ${regForm.formState.errors.alergiaTiene ? COLORS.red : COLORS.border}`,
+                          borderRadius: 9,
+                          padding: "10px 14px",
+                          color: COLORS.text,
+                          fontSize: 13,
+                        }}
+                      >
+                        <input type="radio" value="si" {...regForm.register("alergiaTiene")} style={{ accentColor: COLORS.accent }} />
+                        Sí
+                      </label>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          flex: 1,
+                          background: COLORS.surface,
+                          border: `1px solid ${regForm.formState.errors.alergiaTiene ? COLORS.red : COLORS.border}`,
+                          borderRadius: 9,
+                          padding: "10px 14px",
+                          color: COLORS.text,
+                          fontSize: 13,
+                        }}
+                      >
+                        <input type="radio" value="no" {...regForm.register("alergiaTiene")} style={{ accentColor: COLORS.accent }} />
+                        No
+                      </label>
+                    </div>
+                    {regForm.formState.errors.alergiaTiene?.message && (
+                      <span style={{ color: COLORS.red, fontSize: 11 }}>
+                        {regForm.formState.errors.alergiaTiene.message}
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                {regForm.watch("alergiaTiene") === "si" && (
+                  <FInput
+                    label="¿Cuál alergia? *"
+                    placeholder="Penicilina, aspirina, etc."
+                    {...regForm.register("alergiaDetalle")}
+                    error={regForm.formState.errors.alergiaDetalle?.message}
+                  />
+                )}
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                   <FInput
-                    label="Emergencia"
+                    label="Emergencia *"
                     placeholder="Nombre completo"
                     {...regForm.register("emergenciaNombre")}
                     error={regForm.formState.errors.emergenciaNombre?.message}
                   />
                   <FInput
-                    label="Parentesco"
+                    label="Parentesco *"
                     placeholder="Madre, hermano, etc."
                     {...regForm.register("emergenciaParentesco")}
                     error={regForm.formState.errors.emergenciaParentesco?.message}
                   />
                   <FInput
-                    label="Teléfono de emergencia"
+                    label="Teléfono de emergencia *"
                     placeholder="555-000-0000"
                     {...regForm.register("emergenciaTelefono")}
                     error={regForm.formState.errors.emergenciaTelefono?.message}
@@ -1018,15 +1149,15 @@ export default function Login() {
                         fontFamily: "'DM Mono',monospace",
                       }}
                     >
-                      Factores de riesgo
+                      Factores de riesgo *
                     </label>
                     <textarea
                       rows={4}
-                      placeholder="Colesterol alto, diabetes, sedentarismo..."
+                      placeholder="Colesterol alto, diabetes, sedentarismo... o 'Ninguno'"
                       {...regForm.register("factoresRiesgo")}
                       style={{
                         background: COLORS.surface,
-                        border: `1px solid ${COLORS.border}`,
+                        border: `1px solid ${regForm.formState.errors.factoresRiesgo ? COLORS.red : COLORS.border}`,
                         borderRadius: 9,
                         padding: "10px 14px",
                         color: COLORS.text,
@@ -1036,6 +1167,11 @@ export default function Login() {
                         fontFamily: "inherit",
                       }}
                     />
+                    {regForm.formState.errors.factoresRiesgo?.message && (
+                      <span style={{ color: COLORS.red, fontSize: 11 }}>
+                        {regForm.formState.errors.factoresRiesgo.message}
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <label
@@ -1047,15 +1183,15 @@ export default function Login() {
                         fontFamily: "'DM Mono',monospace",
                       }}
                     >
-                      Medicamento actual
+                      Medicamento actual *
                     </label>
                     <textarea
                       rows={4}
-                      placeholder="Cuál y dosis"
+                      placeholder="Cuál y dosis, o 'Ninguno'"
                       {...regForm.register("medicamentoActual")}
                       style={{
                         background: COLORS.surface,
-                        border: `1px solid ${COLORS.border}`,
+                        border: `1px solid ${regForm.formState.errors.medicamentoActual ? COLORS.red : COLORS.border}`,
                         borderRadius: 9,
                         padding: "10px 14px",
                         color: COLORS.text,
@@ -1065,6 +1201,11 @@ export default function Login() {
                         fontFamily: "inherit",
                       }}
                     />
+                    {regForm.formState.errors.medicamentoActual?.message && (
+                      <span style={{ color: COLORS.red, fontSize: 11 }}>
+                        {regForm.formState.errors.medicamentoActual.message}
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     <label
@@ -1080,11 +1221,11 @@ export default function Login() {
                     </label>
                     <textarea
                       rows={4}
-                      placeholder="Describe cualquier otro"
+                      placeholder="Obligatorio si marcaste alguna condición arriba"
                       {...regForm.register("otroPadecimiento")}
                       style={{
                         background: COLORS.surface,
-                        border: `1px solid ${COLORS.border}`,
+                        border: `1px solid ${regForm.formState.errors.otroPadecimiento ? COLORS.red : COLORS.border}`,
                         borderRadius: 9,
                         padding: "10px 14px",
                         color: COLORS.text,
@@ -1094,6 +1235,11 @@ export default function Login() {
                         fontFamily: "inherit",
                       }}
                     />
+                    {regForm.formState.errors.otroPadecimiento?.message && (
+                      <span style={{ color: COLORS.red, fontSize: 11 }}>
+                        {regForm.formState.errors.otroPadecimiento.message}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1139,12 +1285,12 @@ export default function Login() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <FInput
                     label="Actividad física habitual"
-                    placeholder="Qué haces normalmente"
+                    placeholder="Obligatorio si practicas actividad física"
                     {...regForm.register("actividadTipo")}
                     error={regForm.formState.errors.actividadTipo?.message}
                   />
                   <FInput
-                    label="Última vez en programa"
+                    label="Última vez en programa *"
                     placeholder="Hace 3 meses, nunca, etc."
                     {...regForm.register("ultimaVezPrograma")}
                     error={regForm.formState.errors.ultimaVezPrograma?.message}
@@ -1192,7 +1338,7 @@ export default function Login() {
 
                   <FInput
                     label="Frecuencia semanal"
-                    placeholder="3"
+                    placeholder="Obligatorio si practicas actividad física"
                     type="number"
                     inputMode="numeric"
                     {...regForm.register("frecuenciaSemanal")}
@@ -1200,7 +1346,7 @@ export default function Login() {
                   />
                   <FInput
                     label="Tiempo por sesión"
-                    placeholder="45 min"
+                    placeholder="Obligatorio si practicas actividad física"
                     {...regForm.register("tiempoSesion")}
                     error={regForm.formState.errors.tiempoSesion?.message}
                   />
@@ -1218,7 +1364,7 @@ export default function Login() {
                       marginBottom: 8,
                     }}
                   >
-                    Beneficios esperados
+                    Beneficios esperados * (elige al menos uno)
                   </label>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
                     {BENEFICIOS.map((b) => (
@@ -1229,7 +1375,7 @@ export default function Login() {
                           alignItems: "center",
                           gap: 10,
                           background: COLORS.surface,
-                          border: `1px solid ${COLORS.border}`,
+                          border: `1px solid ${regForm.formState.errors.beneficios ? COLORS.red : COLORS.border}`,
                           borderRadius: 10,
                           padding: "10px 12px",
                           color: COLORS.text,
@@ -1246,6 +1392,11 @@ export default function Login() {
                       </label>
                     ))}
                   </div>
+                  {regForm.formState.errors.beneficios?.message && (
+                    <span style={{ color: COLORS.red, fontSize: 11 }}>
+                      {regForm.formState.errors.beneficios.message}
+                    </span>
+                  )}
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
