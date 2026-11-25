@@ -74,7 +74,7 @@ const ITEMS = [
           <li>Tu plan, tu mensualidad, la fecha de vencimiento y desde cuándo eres miembro.</li>
         </ul>
         <Callout variant="tip" title="¿Cómo pago o renuevo?">
-          Esta pantalla no procesa pagos. Para renovar o pagar, acude a recepción o solicita ahí tu liga de pago en línea.
+          Con el botón <b style={S}>Pagar</b> de esta pantalla (o el botón "Pagar ahora" del recordatorio que te llega por WhatsApp) pagas en la página segura de Mercado Pago con tarjeta, OXXO o SPEI; tus datos de pago no pasan por IronCore. Cuando Mercado Pago confirma el pago, tu membresía se renueva sola y lo ves en "Mis pagos". También puedes pagar en recepción.
         </Callout>
       </>
     ),
@@ -153,7 +153,7 @@ const ITEMS = [
 ];
 
 const FAQ = [
-  ['¿Dónde pago mi mensualidad?', 'En recepción, o solicitando ahí tu liga de pago en línea. El portal no cobra directamente.'],
+  ['¿Dónde pago mi mensualidad?', 'En línea desde Mi Membresía → Pagar (Mercado Pago: tarjeta, OXXO o SPEI), con el botón "Pagar ahora" de tu recordatorio por WhatsApp, o en recepción. Si pagas en OXXO o SPEI, tu membresía se renueva cuando Mercado Pago confirme el pago.'],
   ['¿Puedo tener dos rutinas a la vez?', 'No — al elegir una nueva desde la Biblioteca, la anterior se reemplaza (con confirmación previa).'],
   ['¿Cómo cierro sesión?', 'Usa el botón de cierre de sesión en la parte inferior del menú lateral.'],
   ['¿Mis datos de salud son privados?', 'Sí. Se usan únicamente para tu seguimiento en el gimnasio, conforme al aviso de privacidad que aceptaste al registrarte.'],

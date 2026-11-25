@@ -9,6 +9,7 @@ import { useAuth } from "./context/AuthContext.jsx";
 import Login from "./pages/Login.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import AvisoPrivacidad from "./pages/AvisoPrivacidad.jsx";
+import { PagarLiga, PagarLigaResultado } from "./pages/PagarLiga.jsx";
 
 // Staff
 import Dashboard from "./pages/Dashboard.jsx";
@@ -26,6 +27,7 @@ import ManualAdministrador from "./pages/ManualAdministrador.jsx";
 // Portal cliente
 import MiResumen from "./pages/Cliente/MiResumen.jsx";
 import MiMembresia from "./pages/Cliente/MiMembresia.jsx";
+import PagoResultado from "./pages/Cliente/PagoResultado.jsx";
 import MisRutinas from "./pages/Cliente/MisRutinas.jsx";
 import Diario from "./pages/Cliente/Diario.jsx";
 import Medidas from "./pages/Cliente/Medidas.jsx";
@@ -52,6 +54,9 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/aviso-de-privacidad" element={<AvisoPrivacidad />} />
       <Route path="/privacidad" element={<AvisoPrivacidad />} />
+      {/* Liga pública de pago (botón del recordatorio por WhatsApp), sin sesión */}
+      <Route path="/pagar/:token" element={<PagarLiga />} />
+      <Route path="/pagar/:token/resultado" element={<PagarLigaResultado />} />
 
       {/* ── Portal STAFF (ADMIN / COACH / RECEP) ── */}
       <Route
@@ -149,6 +154,7 @@ export default function App() {
       >
         <Route path="/mi/resumen" element={<MiResumen />} />
         <Route path="/mi/membresia" element={<MiMembresia />} />
+        <Route path="/mi/pago/resultado" element={<PagoResultado />} />
         <Route path="/mi/rutinas" element={<MisRutinas />} />
         <Route path="/mi/diario" element={<Diario />} />
         <Route path="/mi/medidas" element={<Medidas />} />

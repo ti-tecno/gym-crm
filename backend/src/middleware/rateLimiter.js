@@ -29,3 +29,23 @@ export const googleAuthLimiter = rateLimit({
   skipSuccessfulRequests: true,
   message: { error: 'Demasiados intentos de inicio de sesión con Google.' },
 });
+
+// Liga pública de pago (/publico/pagar/...): sin sesión, bucket propio y estricto por IP.
+// Alcanza para abrir la liga, pagar y que la página de resultado consulte el estado unas veces.
+export const ligaPagoLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: 60,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Demasiadas peticiones, intenta más tarde', code: 'RATE_LIMIT' },
+});
+
+// Webhook del mensajero (servidor a servidor, autenticado por firma). Bucket propio y más
+// amplio para que una ráfaga de estados no choque con el límite global de la IP.
+export const webhookLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 300,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Demasiadas peticiones al webhook' },
+});

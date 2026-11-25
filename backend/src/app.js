@@ -11,10 +11,12 @@ import logger from './config/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import requestId from './middleware/requestId.js';
+import { guardarCuerpoCrudoPara } from './middleware/rawBody.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
 import errorHandler from './middleware/errorHandler.js';
 import notFound from './middleware/notFound.js';
 import routes from './routes/index.js';
+import webhooksRoutes, { WEBHOOK_MENSAJERO_PATH } from './routes/webhooks.routes.js';
 
 const app = express();
 
@@ -81,11 +83,15 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 app.use(compression());
-app.use(express.json({ limit: env.JSON_BODY_LIMIT }));
+// El webhook del mensajero se firma sobre el cuerpo crudo: se conserva solo para esa ruta,
+// con el mismo parser y el mismo límite de tamaño que el resto de la app.
+const webhookMensajeroUrl = `${env.API_PREFIX}${WEBHOOK_MENSAJERO_PATH}`;
+app.use(express.json({ limit: env.JSON_BODY_LIMIT, verify: guardarCuerpoCrudoPara(webhookMensajeroUrl) }));
 app.use(express.urlencoded({ extended: false, limit: env.JSON_BODY_LIMIT }));
 app.use(cookieParser());
 app.use(hpp());           // contra HTTP parameter pollution
 app.use(requestId);       // X-Request-Id por petición
+app.use(`${env.API_PREFIX}/webhooks`, webhooksRoutes); // firma propia y limitador propio
 app.use(generalLimiter);  // rate limit global
 
 // Acceso log mínimo

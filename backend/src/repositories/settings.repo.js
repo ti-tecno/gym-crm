@@ -187,6 +187,17 @@ function normalizeCoach(c = {}, idx = 0) {
   };
 }
 
+// Interruptor del recordatorio de pago por WhatsApp. APAGADO por defecto (también si el
+// registro no existe o el valor no es exactamente true): solo el admin lo enciende.
+// Se normaliza aquí para que saveSettings() de otras secciones no lo borre.
+function normalizeMensajeria(m) {
+  return {
+    activo: m?.activo === true,
+    actualizadoPor: typeof m?.actualizadoPor === 'string' ? m.actualizadoPor : null,
+    actualizadoAt: typeof m?.actualizadoAt === 'string' ? m.actualizadoAt : null,
+  };
+}
+
 function normalizeSettings(item) {
   if (!item) {
     return {
@@ -196,6 +207,7 @@ function normalizeSettings(item) {
       schedule: DEFAULT_SCHEDULE,
       calendar: DEFAULT_CALENDAR,
       coaches: DEFAULT_COACHES,
+      mensajeria: normalizeMensajeria(null),
     };
   }
   return {
@@ -211,6 +223,7 @@ function normalizeSettings(item) {
     coaches: Array.isArray(item.coaches) && item.coaches.length > 0
       ? item.coaches.map((c, idx) => normalizeCoach(c, idx))
       : DEFAULT_COACHES,
+    mensajeria: normalizeMensajeria(item.mensajeria),
   };
 }
 
@@ -235,6 +248,18 @@ export async function saveSettings(next) {
     Item: merged,
   }));
   return merged;
+}
+
+/** Lectura directa del interruptor (sin caché: apagarlo surte efecto en el siguiente envío). */
+export async function getMensajeria() {
+  const { Item } = await ddb.send(new GetCommand({
+    TableName: TABLES.SETTINGS,
+    Key: { settingsId: SETTINGS_PK },
+    ConsistentRead: true,
+    ProjectionExpression: '#m',
+    ExpressionAttributeNames: { '#m': 'mensajeria' },
+  }));
+  return normalizeMensajeria(Item?.mensajeria);
 }
 
 export async function getPublicSettings() {

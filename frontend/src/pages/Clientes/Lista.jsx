@@ -171,7 +171,7 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
                 <td style={{ padding: '13px 18px' }}><Badge text={c.estado} /></td>
                 <td style={{ padding: '13px 18px' }}>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={onPagar} style={{ background: `${COLORS.accent}22`, color: COLORS.accent, border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>💳 Pagar</button>
+                    <button onClick={() => onPagar(c)} title="Registrar pago en mostrador" style={{ background: `${COLORS.accent}22`, color: COLORS.accent, border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>💳 Pagar</button>
                     <button onClick={onRecordar} style={{ background: `${COLORS.blue}22`, color: COLORS.blue, border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer' }}>🔔</button>
                     <button onClick={() => openEditor(c)} style={{ background: COLORS.border, color: COLORS.muted, border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer' }}>✏</button>
                   </div>

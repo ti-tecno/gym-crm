@@ -3,6 +3,8 @@ import SectionHeader from "../components/ui/SectionHeader.jsx";
 import TabBar from "../components/ui/TabBar.jsx";
 import { COLORS } from "../constants/theme.js";
 import { settingsService } from "../services/modules.service.js";
+import BackofficeMensajeria from "./BackofficeMensajeria.jsx";
+import BackofficeMercadoPago from "./BackofficeMercadoPago.jsx";
 
 function hexToRgba(hex, alpha) {
   const h = (hex || "#4A90D9").replace("#", "");
@@ -17,6 +19,8 @@ const TABS = [
   { id: "promotions", icon: "🎉", label: "Promociones" },
   { id: "coaches",    icon: "🏋️", label: "Coaches" },
   { id: "schedule",   icon: "🗓", label: "Horarios" },
+  { id: "mensajeria", icon: "📱", label: "Mensajería" },
+  { id: "mercadopago", icon: "🔐", label: "Mercado Pago" },
 ];
 
 function Card({ title, children, right }) {
@@ -1183,6 +1187,9 @@ export default function BackofficeContenido() {
           </Card>
         </>
       )}
+
+      {tab === "mensajeria" && <BackofficeMensajeria Card={Card} />}
+      {tab === "mercadopago" && <BackofficeMercadoPago Card={Card} />}
     </div>
   );
 }
