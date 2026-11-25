@@ -3,6 +3,7 @@ import { z } from 'zod';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseMensajeroConfig } from './mensajero.js';
 
 // Resolve .env relative to this file (backend/.env), not process.cwd() —
 // pm2/systemd may launch with a different working directory.
@@ -74,5 +75,14 @@ env.CORS_ORIGIN_LIST = Array.from(new Set([
   'https://www.iron-core.mx',
 ]));
 env.IS_PROD = env.NODE_ENV === 'production';
+
+// Recordatorio de pago por WhatsApp (SofIA Messenger API). Todas opcionales; se
+// validan aparte para que una variable mal puesta apague la función en vez de
+// impedir que el servidor arranque. Ver config/mensajero.js y docs/RECORDATORIO_PAGO.md:
+//   MENSAJERO_URL, MENSAJERO_API_KEY, MENSAJERO_WEBHOOK_SECRET, MENSAJERO_CANAL,
+//   RECORDATORIO_PAGO_PLANTILLA_ANTES / _HOY / _DESPUES, RECORDATORIO_PAGO_IDIOMA,
+//   RECORDATORIO_PAGO_ETAPAS, RECORDATORIO_PAGO_HORA
+// Son solo de conexión: el interruptor de envío está en gym_settings (Backoffice → Mensajería).
+env.MENSAJERO = parseMensajeroConfig(process.env);
 
 export default env;

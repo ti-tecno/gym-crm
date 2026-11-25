@@ -5,6 +5,7 @@ import path from 'node:path';
 import app from './app.js';
 import env from './config/env.js';
 import logger from './config/logger.js';
+import { iniciarTareaRecordatorioPago } from './services/recordatorioPago.js';
 
 function resolveIfExists(filePath) {
   if (!filePath) return null;
@@ -31,13 +32,20 @@ if (!keyPath || !certPath) {
   logger.warn('TLS no configurado (TLS_KEY_PATH/TLS_CERT_PATH). Iniciando en HTTP.');
 }
 
+let detenerRecordatorioPago = () => {};
+
 server.listen(env.PORT, () => {
   const protocol = keyPath && certPath ? 'https' : 'http';
   logger.info(`IronCore API escuchando en ${protocol}://localhost:${env.PORT}${env.API_PREFIX}`);
+  // Recordatorio de pago por WhatsApp: nunca debe tumbar el servidor.
+  try { detenerRecordatorioPago = iniciarTareaRecordatorioPago(); } catch (err) {
+    logger.error('No se pudo iniciar la tarea de recordatorio de pago', { err: err?.message });
+  }
 });
 
 function shutdown(signal) {
   logger.info(`Recibida ${signal}. Cerrando…`);
+  detenerRecordatorioPago();
   server.close((err) => {
     if (err) { logger.error('Error cerrando servidor', { err: err.message }); process.exit(1); }
     process.exit(0);

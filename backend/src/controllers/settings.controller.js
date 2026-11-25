@@ -1,4 +1,6 @@
 import * as repo from '../repositories/settings.repo.js';
+import logger from '../config/logger.js';
+import { HttpError } from '../middleware/errorHandler.js';
 
 export async function getPublic(_req, res, next) {
   try {
@@ -98,6 +100,26 @@ export async function updateCoaches(req, res, next) {
     }));
     const data = await repo.saveSettings({ coaches });
     res.json({ coaches: data.coaches });
+  } catch (e) {
+    next(e);
+  }
+}
+
+// Interruptor del recordatorio de pago por WhatsApp (solo ADMIN). Se exige un booleano
+// explícito: cualquier otra cosa no cambia nada.
+export async function updateMensajeria(req, res, next) {
+  try {
+    if (typeof req.body?.activo !== 'boolean') {
+      return next(new HttpError(400, 'VALIDATION_ERROR', 'Se espera { activo: true | false }'));
+    }
+    const mensajeria = {
+      activo: req.body.activo,
+      actualizadoPor: req.user?.email || req.user?.sub || null,
+      actualizadoAt: new Date().toISOString(),
+    };
+    const data = await repo.saveSettings({ mensajeria });
+    logger.info('Recordatorio de pago por WhatsApp ' + (mensajeria.activo ? 'ENCENDIDO' : 'APAGADO'), { por: mensajeria.actualizadoPor });
+    res.json({ mensajeria: data.mensajeria });
   } catch (e) {
     next(e);
   }

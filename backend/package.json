@@ -23,7 +23,7 @@
     "db:reset": "node src/scripts/createTables.js --recreate && node src/scripts/seed.js",
     "keys:gen": "node src/scripts/generateKeys.js",
     "lint": "echo 'Add eslint if needed'",
-    "test": "echo 'Add tests with vitest or jest'"
+    "test": "node --test"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.624.0",

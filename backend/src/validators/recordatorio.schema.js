@@ -9,3 +9,5 @@ export const recordatorioCreateSchema = z.object({
 });
 
 export const recordatorioUpdateSchema = recordatorioCreateSchema.partial();
+
+export const recordatorioPagoParams = z.object({ clienteId: z.string().uuid() });

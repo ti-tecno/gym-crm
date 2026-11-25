@@ -29,3 +29,13 @@ export const googleAuthLimiter = rateLimit({
   skipSuccessfulRequests: true,
   message: { error: 'Demasiados intentos de inicio de sesión con Google.' },
 });
+
+// Webhook del mensajero (servidor a servidor, autenticado por firma). Bucket propio y más
+// amplio para que una ráfaga de estados no choque con el límite global de la IP.
+export const webhookLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 300,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Demasiadas peticiones al webhook' },
+});
