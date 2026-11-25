@@ -152,7 +152,7 @@ const ADMIN_ITEMS = [
     title: 'Backoffice de Contenido',
     tag: '/admin/contenido',
     badge: ADMIN_BADGE,
-    dek: 'Edita lo que ve el público en la landing page y controla la mensajería por WhatsApp.',
+    dek: 'Edita lo que ve el público en la landing page, controla la mensajería por WhatsApp y configura Mercado Pago.',
     children: (
       <>
         <ul>
@@ -161,6 +161,7 @@ const ADMIN_ITEMS = [
           <li><b style={S}>Coaches</b> — alta/edición/eliminación de coaches del carrusel: nombre, especialidad, descripción y foto.</li>
           <li><b style={S}>Horarios</b> — parrilla semanal: tipos de clase con color, días, franjas horarias y qué clase corre en cada celda.</li>
           <li><b style={S}>Mensajería</b> — interruptor de los WhatsApp de IronCore (arranca <b style={S}>apagado</b>): recordatorios de pago y mensaje de pago recibido. Muestra además, en solo lectura, si SofIA activó el servicio de mensajería; para que salgan mensajes deben estar encendidos los dos. También indica si el servidor está conectado al mensajero y a Mercado Pago, y a quién le toca mensaje hoy. Apagado, no se envía nada (los pagos se registran igual). Se guarda al instante, sin botón de guardar.</li>
+          <li><b style={S}>Mercado Pago</b> — credenciales del pago en línea (Access Token y clave secreta de webhooks) y <b style={S}>teléfono del administrador del sitio</b>. Muestra si el pago en línea está configurado, si las credenciales salen de aquí o del servidor, si son de prueba o de producción y solo sus últimos 4 caracteres, además de la URL del webhook para pegar en Mercado Pago. <b style={S}>Cada cambio pide un código de 6 dígitos</b> que llega por WhatsApp al teléfono del administrador (vale 10 minutos y sirve una sola vez, solo para esa operación). Primero registra el teléfono: escribe el celular y tu contraseña, y confirma con el código que llega a ese número. Para cambiarlo después llega un código al número actual y luego otro al nuevo. Al guardar solo se revisa el formato de las credenciales, no se prueban con Mercado Pago: haz un pago de prueba después. Si el código no se puede enviar (WhatsApp sin activar por SofIA, número sin WhatsApp, plantilla aún no aprobada) la pantalla lo dice; no hay otra forma de hacer el cambio.</li>
         </ul>
         <Callout variant="tip" title="Recuerda guardar cada pestaña">
           Cada pestaña tiene su propio botón de guardado ("Guardar paquetes", "Guardar coaches", etc.) — los cambios no se guardan solos al cambiar de pestaña.

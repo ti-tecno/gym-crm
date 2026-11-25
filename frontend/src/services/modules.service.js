@@ -84,6 +84,13 @@ export const settingsService = {
   updateCalendar: (calendar)    => api.put('/settings/admin/calendar', { calendar }).then(r => r.data),
   updateCoaches:  (coaches)     => api.put('/settings/admin/coaches',  { coaches  }).then(r => r.data),
   updateMensajeria: (activo)    => api.put('/settings/admin/mensajeria', { activo }).then(r => r.data),
+  // Backoffice → Mercado Pago (credenciales cifradas + teléfono del administrador + código por WhatsApp)
+  seguridad:          ()                                   => api.get('/settings/admin/seguridad').then(r => r.data),
+  pedirCodigo:        (accion)                             => api.post('/settings/admin/seguridad/codigo', { accion }).then(r => r.data),
+  guardarMercadoPago: (accessToken, webhookSecret, codigo) => api.put('/settings/admin/seguridad/mercadopago', { accessToken, webhookSecret, codigo }).then(r => r.data),
+  borrarMercadoPago:  (codigo)                             => api.post('/settings/admin/seguridad/mercadopago/borrar', { codigo }).then(r => r.data),
+  codigoTelefonoNuevo: (datos)                             => api.post('/settings/admin/seguridad/telefono/codigo', datos).then(r => r.data),
+  confirmarTelefono:  (telefono, codigo)                   => api.put('/settings/admin/seguridad/telefono', { telefono, codigo }).then(r => r.data),
   uploadCoachImg: (file)        => {
     const form = new FormData();
     form.append('image', file);

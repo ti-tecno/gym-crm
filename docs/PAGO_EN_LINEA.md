@@ -25,10 +25,53 @@ Todas opcionales: si falta alguna, el pago en línea queda apagado (no aparece e
 | `PUBLIC_FRONTEND_URL` | URL pública **HTTPS** del frontend: `https://iron-core.mx`. Arma las URLs de regreso |
 | `MERCADOPAGO_STATEMENT_DESCRIPTOR` | Opcional, ≤13 caracteres (por defecto `IRONCORE GYM`) |
 | `LIGA_PAGO_SECRET` | Ver `docs/RECORDATORIO_PAGO.md` (firma las ligas `/pagar/<token>`) |
+| `CREDENCIALES_LLAVE_MAESTRA` | Opcional. Llave para cifrar las credenciales capturadas en el Backoffice (ver abajo). Sin ella, solo funcionan las de entorno |
+| `OTP_PLANTILLA` / `OTP_IDIOMA` | Plantilla de autenticación del código por WhatsApp (por defecto `ironcore_codigo_verificacion` / `es_MX`) |
+
+El token y la clave secreta también se pueden capturar desde el Backoffice (siguiente sección); esas tienen prioridad sobre las variables.
+
+## Configurar las credenciales desde el Backoffice
+
+**Backoffice de Contenido → pestaña "Mercado Pago"** (solo ADMIN) permite capturar el Access Token y la clave secreta de webhooks sin tocar el servidor. Muestra si el pago en línea está configurado, **de dónde salen** las credenciales (Backoffice o variables de entorno), si son de **prueba** (`TEST-`) o de **producción** (`APP_USR-`), los **últimos 4** caracteres de cada una (nunca el valor completo, tampoco en la API) y la **URL del webhook** que hay que pegar en el panel de Mercado Pago.
+
+- **Prioridad:** si hay credenciales guardadas en el Backoffice se usan esas; si no, las de `MERCADOPAGO_ACCESS_TOKEN` / `MERCADOPAGO_WEBHOOK_SECRET`. `PUBLIC_API_URL`, `PUBLIC_FRONTEND_URL` y el descriptor siempre salen del entorno. El cambio surte efecto en la siguiente operación, **sin reiniciar** (`obtenerConfigMercadoPago()` en `backend/src/services/pagos.js` lee `gym_settings` en cada llamada).
+- **Solo se valida el formato** (`APP_USR-…`/`TEST-…`; clave de ≥16 letras o números). No se consulta a Mercado Pago al guardar: después haz un pago de prueba.
+- **Cifrado en reposo:** AES-256-GCM (`node:crypto`) con la llave de `CREDENCIALES_LLAVE_MAESTRA` y el nombre del campo como dato asociado. Sin esa variable la pestaña lo explica y no deja guardar (las de entorno siguen funcionando).
+- **Código por WhatsApp obligatorio:** guardar o borrar credenciales y cambiar el teléfono exigen un código de 6 dígitos que llega al **teléfono del administrador del sitio** (se registra en la misma pestaña). Ver abajo.
+- **Borrar** las guardadas regresa a las variables de entorno (si las hay; si no, el pago en línea se apaga).
+
+### La llave maestra (`CREDENCIALES_LLAVE_MAESTRA`)
+
+32 bytes aleatorios en base64 (44 caracteres) o hex (64): `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Va solo en `backend/.env` del servidor (nunca con prefijo `VITE_`, nunca en el repositorio) y conviene guardar una copia en un gestor de contraseñas. Requiere reiniciar el backend.
+
+**Si se pierde o se cambia:** las credenciales guardadas quedan ilegibles. El backend **no se cae ni usa otras**: Mercado Pago queda "no configurado" (no aparece el botón de pagar y el webhook responde 503, así que Mercado Pago reintenta los avisos) y la pestaña muestra el aviso con los últimos 4 guardados. Para recuperarse: poner una llave (la misma si apareció, o una nueva), **borrar** las guardadas desde la pestaña (borrar no necesita la llave) y volver a capturarlas desde el panel de Mercado Pago. Un dato alterado en la base de datos se comporta igual (lo detecta la autenticación de GCM).
+
+### Teléfono del administrador y código de un solo uso
+
+- **Primera vez:** celular mexicano con WhatsApp + la **contraseña actual** del admin → llega un código a ese número → se confirma. Cuentas que solo entran con Google no tienen contraseña y no pueden hacer el alta.
+- **Cambio:** código al **número actual** → con ese código y el número nuevo se envía otro código al **número nuevo** → se confirma. Si el envío al nuevo falla, se empieza de nuevo (el primer código ya se usó).
+- **Reglas del código:** 6 dígitos con azar criptográfico; se guarda solo su HMAC-SHA256 (con sal y una "pimienta" derivada de la llave privada del JWT, que no está en la BD); vale **10 minutos**, **un solo uso**, **5 intentos** y luego se invalida; **1 reenvío por minuto** y **5 solicitudes por hora** por usuario (las contraseñas incorrectas cuentan); ligado al usuario, a la operación y al número destino; comparación en tiempo constante; un código nuevo invalida el anterior. El código se manda **en la misma petición** que hace el cambio: verificarlo autoriza esa operación y nada más. Toda escritura es condicional por versión: dos verificaciones simultáneas no pueden usar el mismo código.
+- **Envío:** `POST /v1/messages/template` del mensajero con la plantilla de autenticación `OTP_PLANTILLA` (por defecto `ironcore_codigo_verificacion`, `es_MX`) y `parameters: { otpCode }`. **No depende del interruptor de Mensajería** (ese es para los mensajes a clientes), pero sí de que el mensajero esté configurado y de que SofIA tenga activa la app. Si no se puede enviar (mensajero sin configurar, app apagada por SofIA, número sin WhatsApp, plantilla aún no aprobada, límite diario, mensajero caído) la pantalla lo dice y no queda ningún código válido pendiente. **No hay camino alterno sin código.**
+- **Auditoría:** el log registra quién pidió un código y para qué, intentos incorrectos y quién cambió credenciales o teléfono (`[seguridad] …`), con el teléfono enmascarado y sin secretos ni códigos.
+
+### Dónde se guarda
+
+En `gym_settings`, en ítems **aparte** del de contenido (`global-settings`), así guardar Paquetes u otra pestaña nunca los borra y `GET /settings/public` / `GET /settings/admin` nunca los devuelven. Sin índices ni tablas nuevas.
+
+| `settingsId` | Contenido |
+|---|---|
+| `sitio-seguridad` | `adminTelefono` (+52…, en claro), quién/cuándo lo cambió; `mercadoPago`: `accessTokenCifrado`, `webhookSecretCifrado` (formato `v1.<idLlave>.<iv>.<tag>.<cifrado>`), últimos 4 de cada una, `modoPrueba`, `llaveId`, quién/cuándo; `version` |
+| `otp-admin#<userId>` | código vigente de ese admin: `hash`, `sal`, `accion`, `destino`, `expiraAt`, `intentos`, `estado` (`pendiente`/`usado`/`agotado`/`anulado`), `telefonoAnterior` (en un cambio), solicitudes de la última hora; `version` |
+
+Endpoints (todos `ADMIN`; los de cambio con CSRF), bajo `/api/v1/settings/admin/seguridad`: `GET /` (estado) · `POST /codigo` `{ accion: mp_guardar | mp_borrar | telefono_cambiar }` · `PUT /mercadopago` `{ accessToken, webhookSecret, codigo }` · `POST /mercadopago/borrar` `{ codigo }` · `POST /telefono/codigo` `{ telefono, password }` o `{ telefono, codigo }` · `PUT /telefono` `{ telefono, codigo }`.
+
+### Si el administrador pierde su teléfono
+
+No hay forma de saltarse el código desde la aplicación (a propósito). Quien tenga acceso a DynamoDB (consola de AWS) quita el atributo `adminTelefono` del ítem `sitio-seguridad` de `gym_settings` (sin tocar `mercadoPago`); después un ADMIN registra el número nuevo con su contraseña. Mientras tanto Mercado Pago sigue funcionando con las credenciales que ya estaban guardadas.
 
 ## Panel de Mercado Pago (Tus integraciones → tu aplicación)
 
-1. **Webhooks → Configurar notificaciones**, en *Modo productivo* (y en *Modo de prueba* para probar): URL `https://<api>/api/v1/webhooks/mercadopago`, evento **Pagos** (`payment`). Guardar y copiar la **clave secreta** a `MERCADOPAGO_WEBHOOK_SECRET`.
+1. **Webhooks → Configurar notificaciones**, en *Modo productivo* (y en *Modo de prueba* para probar): URL `https://<api>/api/v1/webhooks/mercadopago`, evento **Pagos** (`payment`). Guardar y copiar la **clave secreta** a `MERCADOPAGO_WEBHOOK_SECRET` (o capturarla en Backoffice → Mercado Pago, que muestra esta URL lista para copiar).
 2. Cada preferencia además manda su `notification_url` (`…/webhooks/mercadopago?source_news=webhooks`), que tiene prioridad sobre la del panel.
 3. "Simular" del panel manda un id de pago inexistente: el backend lo verifica, consulta a Mercado Pago, recibe 404 y responde 200 sin hacer nada (sirve para comprobar firma y alcance).
 
