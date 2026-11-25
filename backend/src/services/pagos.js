@@ -13,6 +13,7 @@ import { crearClienteMercadoPago } from './mercadoPago.client.js';
 import { crearServicioPagoRecibido } from './pagoRecibido.service.js';
 import { crearServicioRespuestas } from './respuestas.service.js';
 import { crearServicioPagos } from './pagos.service.js';
+import { seguridad } from './seguridad.js';
 
 const mensajero = crearClienteMensajero({ url: env.MENSAJERO.url, apiKey: env.MENSAJERO.apiKey });
 
@@ -31,11 +32,12 @@ export const respuestas = crearServicioRespuestas({ clientes: clientesRepo, logg
 /**
  * ÚNICA fuente de la configuración de Mercado Pago (token, secreto del webhook, URLs y si está
  * configurado). Todo el código de MP la llama en cada operación; nadie guarda el token en una
- * constante. Hoy devuelve lo de las variables de entorno; para leerla de settings (cifrada) basta
- * con cambiar esta función, manteniendo la forma de parseMercadoPagoConfig (config/mercadoPago.js).
+ * constante. Prioridad: credenciales guardadas (cifradas) en Backoffice → Mercado Pago; si no hay,
+ * las variables de entorno. Misma forma que parseMercadoPagoConfig, más `origen`. Lee gym_settings
+ * en cada llamada (sin caché): un cambio en el Backoffice surte efecto sin reiniciar. Nunca lanza.
  */
 export async function obtenerConfigMercadoPago() {
-  return env.MERCADOPAGO;
+  return seguridad.obtenerConfigMercadoPago();
 }
 
 export const pagos = crearServicioPagos({

@@ -1,8 +1,21 @@
 import { Router } from 'express';
 import { requireAuth, requireCsrf, requireRole } from '../middleware/auth.js';
 import * as ctrl from '../controllers/settings.controller.js';
+import { HttpError } from '../middleware/errorHandler.js';
+import { seguridad } from '../services/seguridad.js';
+import { ErrorSeguridad } from '../services/seguridad.service.js';
+import { crearRutasSeguridad } from './seguridad.routes.js';
 
 const router = Router();
+
+// Backoffice → Mercado Pago (credenciales cifradas, teléfono del administrador, OTP). Solo ADMIN.
+router.use('/admin/seguridad', crearRutasSeguridad({
+  servicio: seguridad,
+  requireAuth,
+  requireRole,
+  requireCsrf,
+  aError: (e) => (e instanceof ErrorSeguridad ? new HttpError(e.status, e.code, e.message, e.details) : e),
+}));
 
 // Público (landing)
 router.get('/public', ctrl.getPublic);

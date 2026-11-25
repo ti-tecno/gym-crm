@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseMensajeroConfig } from './mensajero.js';
 import { parseMercadoPagoConfig } from './mercadoPago.js';
+import { parseSeguridadConfig } from './seguridad.js';
 
 // Resolve .env relative to this file (backend/.env), not process.cwd() —
 // pm2/systemd may launch with a different working directory.
@@ -91,5 +92,9 @@ env.MENSAJERO = parseMensajeroConfig(process.env);
 //   MERCADOPAGO_ACCESS_TOKEN, MERCADOPAGO_WEBHOOK_SECRET, PUBLIC_API_URL, PUBLIC_FRONTEND_URL,
 //   MERCADOPAGO_STATEMENT_DESCRIPTOR
 env.MERCADOPAGO = parseMercadoPagoConfig(process.env, { apiPrefix: env.API_PREFIX });
+
+// Credenciales de Mercado Pago desde el Backoffice (cifradas) y código OTP por WhatsApp. Todas
+// opcionales. Ver config/seguridad.js: CREDENCIALES_LLAVE_MAESTRA, OTP_PLANTILLA, OTP_IDIOMA
+env.SEGURIDAD = parseSeguridadConfig(process.env);
 
 export default env;

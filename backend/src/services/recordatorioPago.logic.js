@@ -237,7 +237,9 @@ export function interpretarRespuesta(status, body) {
   const err = body?.error || {};
   const code = err.code || null;
   const mensajeId = message?.id || null;
-  const base = { mensajeId, telefono: message?.phone || null, reintentable: false, detener: false };
+  // codigoMeta: código numérico de Meta del mensaje fallido (p. ej. 132001 = plantilla no aprobada).
+  const codigoMeta = typeof message?.error?.code === 'number' ? message.error.code : null;
+  const base = { mensajeId, telefono: message?.phone || null, codigoMeta, reintentable: false, detener: false };
 
   if (status === 201 || (status === 200 && !body?.duplicate)) {
     return { ...base, resultado: 'enviado', estado: estadoLocal(message?.status) || ESTADO.ENVIADO, motivo: motivoDeMensaje(message) };
