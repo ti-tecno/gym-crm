@@ -2,20 +2,24 @@ import dotenv from 'dotenv';
 import { z } from 'zod';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-dotenv.config();
+// Resolve .env relative to this file (backend/.env), not process.cwd() —
+// pm2/systemd may launch with a different working directory.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   API_PREFIX: z.string().default('/api/v1'),
   REQUEST_TIMEOUT_MS: z.coerce.number().default(30_000),
-  JSON_BODY_LIMIT: z.string().default('1mb'),
+  JSON_BODY_LIMIT: z.string().default('100kb'),
 
   TLS_KEY_PATH: z.string().optional(),
   TLS_CERT_PATH: z.string().optional(),
 
-  CORS_ORIGINS: z.string().default('http://localhost:5173'),
+  CORS_ORIGINS: z.string().default('http://localhost:5173,https://www.iron-core.mx'),
 
   JWT_PRIVATE_KEY_PATH: z.string(),
   JWT_PUBLIC_KEY_PATH: z.string(),
@@ -29,6 +33,8 @@ const schema = z.object({
   COOKIE_DOMAIN: z.string().optional(),
 
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
+
+  GOOGLE_CLIENT_ID: z.string().optional(),
 
   AWS_REGION: z.string().default('us-east-1'),
   AWS_ACCESS_KEY_ID: z.string(),
@@ -53,7 +59,7 @@ const env = parsed.data;
 
 // Resuelve claves (lazy — sólo si los archivos existen)
 function readKey(p) {
-  const abs = path.isAbsolute(p) ? p : path.resolve(process.cwd(), p);
+  const abs = path.isAbsolute(p) ? p : path.resolve(__dirname, '../..', p);
   if (!fs.existsSync(abs)) {
     console.warn(`[env] Clave no encontrada: ${abs}. Ejecuta: npm run keys:gen`);
     return null;
@@ -63,7 +69,10 @@ function readKey(p) {
 
 env.JWT_PRIVATE_KEY = readKey(env.JWT_PRIVATE_KEY_PATH);
 env.JWT_PUBLIC_KEY = readKey(env.JWT_PUBLIC_KEY_PATH);
-env.CORS_ORIGIN_LIST = env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean);
+env.CORS_ORIGIN_LIST = Array.from(new Set([
+  ...env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean),
+  'https://www.iron-core.mx',
+]));
 env.IS_PROD = env.NODE_ENV === 'production';
 
 export default env;

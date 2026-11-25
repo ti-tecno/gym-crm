@@ -14,10 +14,19 @@ export const rutinaClienteSchema = z.object({
   dias: z.array(diaSchema).max(7),
 });
 
-export const rutinaCoachSchema = z.object({
+export const rutinaCoachCreateSchema = z.object({
   nombre: z.string().min(2).max(80),
   nivel: z.enum(['Principiante', 'Intermedio', 'Avanzado']),
   duracion: z.string().max(20),
-  clientes: z.number().int().nonnegative().max(100),
   coach: z.string().max(80),
+  clientes: z.number().int().nonnegative().max(100).optional().default(0),
+  dias: z.array(diaSchema).max(7).optional().default([]),
+});
+
+export const rutinaCoachUpdateSchema = rutinaCoachCreateSchema.partial();
+export const rutinaCoachIdParam = z.object({ id: z.string().min(1) });
+
+// POST /cliente/rutina/asignar — el cliente se auto-asigna un programa de la biblioteca (gym_rutinas_coach)
+export const asignarRutinaSchema = z.object({
+  rutinaId: z.string().uuid(),
 });

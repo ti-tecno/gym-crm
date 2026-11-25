@@ -11,6 +11,7 @@ const loginResponseSchema = z.object({
     nombre: z.string(),
     rol: z.enum(['ADMIN', 'COACH', 'RECEP', 'CLIENTE']),
     clienteId: z.string().nullable().optional(),
+    perfilCompleto: z.boolean().optional().default(true),
   }),
 });
 
@@ -22,10 +23,20 @@ const meSchema = z.object({
   nombre: z.string(),
   rol: ROLE,
   clienteId: z.string().nullable().optional(),
+  perfilCompleto: z.boolean().optional().default(true),
 });
 
 export async function login(email, password) {
   const { data } = await api.post('/auth/login', { email, password });
+  const parsed = loginResponseSchema.parse(data);
+  tokenStore.setAccess(parsed.accessToken);
+  tokenStore.setCsrf(parsed.csrfToken);
+  return parsed.user;
+}
+
+/** Login con Google — sólo funciona para cuentas ya existentes (mismo shape que login). */
+export async function loginWithGoogle(credential) {
+  const { data } = await api.post('/auth/google', { credential });
   const parsed = loginResponseSchema.parse(data);
   tokenStore.setAccess(parsed.accessToken);
   tokenStore.setCsrf(parsed.csrfToken);

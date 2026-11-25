@@ -39,12 +39,19 @@ export default function MiResumen() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
         <StatCard label="Sesiones totales" value={progreso.totalSesiones}     color={COLORS.accent} icon="◎" />
         <StatCard label="Racha actual"     value={`${progreso.racha} días`}    color={COLORS.green}  icon="✦" sub={progreso.últimoEntreno ? `Última: ${fmtDate(progreso.últimoEntreno)}` : 'Sin sesiones'} />
         <StatCard label="Récords personales" value={progreso.totalPRs}        color={COLORS.purple} icon="★" />
-        <StatCard label="Δ Peso"           value={progreso.diffPeso == null ? '—' : `${progreso.diffPeso > 0 ? '+' : ''}${progreso.diffPeso} kg`}
-                  color={progreso.diffPeso == null ? COLORS.muted : progreso.diffPeso > 0 ? COLORS.accent : COLORS.green} icon="⚖" />
+        <StatCard
+          label="Peso actual"
+          value={progreso.pesoActual != null ? `${progreso.pesoActual} kg` : '—'}
+          color={COLORS.blue}
+          icon="⚖"
+          sub={progreso.diffPeso == null
+            ? 'Sin referencia inicial'
+            : `${progreso.diffPeso > 0 ? '+' : ''}${progreso.diffPeso} kg vs inicio`}
+        />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 20 }}>

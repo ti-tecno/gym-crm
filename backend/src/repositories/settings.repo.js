@@ -5,46 +5,95 @@ const SETTINGS_PK = 'global-settings';
 
 const DEFAULT_PACKAGES = [
   {
-    id: 'basico',
-    nombre: 'Básico',
-    precio: 450,
+    id: 'mensual',
+    nombre: 'Mensual',
+    precio: 500,
     periodo: 'mes',
     features: [
-      'Acceso a todas las máquinas',
+      'Acceso completo al gimnasio',
       'Vestidores y casilleros',
       'Horario completo',
-      'Evaluación inicial',
+      'Sin permanencia mínima',
     ],
     color: '#4A90D9',
     destacado: false,
   },
   {
-    id: 'premium',
-    nombre: 'Premium',
-    precio: 850,
+    id: 'estudiante',
+    nombre: 'Estudiante',
+    precio: 400,
     periodo: 'mes',
     features: [
-      'Todo lo del plan Básico',
-      'Clases grupales ilimitadas',
-      'App de seguimiento',
-      'Asesoría nutricional básica',
+      'Acceso completo al gimnasio',
+      'Válido con credencial de estudiante vigente',
+      'Vestidores y casilleros',
+      'Horario completo',
+    ],
+    color: '#2ECC71',
+    destacado: false,
+  },
+  {
+    id: 'trimestre',
+    nombre: 'Trimestre',
+    precio: 1450,
+    periodo: 'trimestre',
+    features: [
+      'Todo lo del plan Mensual',
+      'Ahorra vs. pagar mes a mes',
+      'Evaluación física inicial',
+      'Acceso a clases grupales',
     ],
     color: '#CF1B36',
     destacado: true,
   },
   {
-    id: 'elite',
-    nombre: 'Elite',
-    precio: 1200,
-    periodo: 'mes',
+    id: 'semestre',
+    nombre: 'Semestre',
+    precio: 2500,
+    periodo: 'semestre',
     features: [
-      'Todo lo del plan Premium',
-      'Coach personal dedicado',
-      'Plan nutricional personalizado',
-      'Suplementos con 10% dto',
+      'Todo lo del plan Trimestre',
+      'Mayor ahorro por mes',
+      'Seguimiento de progreso',
+      'Asesoría nutricional básica',
     ],
     color: '#9B59B6',
     destacado: false,
+  },
+  {
+    id: 'anual',
+    nombre: 'Anual',
+    precio: 2999,
+    periodo: 'anualidad',
+    features: [
+      'Todo lo del plan Semestre',
+      'El mejor precio por mes',
+      'Plan de entrenamiento personalizado',
+      'Congelamiento de membresía disponible',
+    ],
+    color: '#E8A33D',
+    destacado: false,
+  },
+];
+
+const DEFAULT_PROMOTIONS = [
+  {
+    id: 'promo-3x2',
+    nombre: '3x2 en Membresía',
+    descripcion: 'Paga 2 meses y llévate el tercero gratis.',
+    precio: 999,
+    periodo: '3 meses',
+    badge: '3X2',
+    color: '#CF1B36',
+  },
+  {
+    id: 'promo-pareja',
+    nombre: 'Promo Pareja',
+    descripcion: 'Inscríbete junto a tu pareja y ambos entrenan con descuento especial.',
+    precio: 950,
+    periodo: 'mes (los dos)',
+    badge: 'PAREJA',
+    color: '#9B59B6',
   },
 ];
 
@@ -143,6 +192,7 @@ function normalizeSettings(item) {
     return {
       settingsId: SETTINGS_PK,
       packages: DEFAULT_PACKAGES,
+      promotions: DEFAULT_PROMOTIONS,
       schedule: DEFAULT_SCHEDULE,
       calendar: DEFAULT_CALENDAR,
       coaches: DEFAULT_COACHES,
@@ -153,6 +203,9 @@ function normalizeSettings(item) {
     packages: Array.isArray(item.packages)
       ? item.packages.map((pkg, idx) => normalizePackage(pkg, idx))
       : DEFAULT_PACKAGES,
+    promotions: Array.isArray(item.promotions) && item.promotions.length > 0
+      ? item.promotions
+      : DEFAULT_PROMOTIONS,
     schedule: item.schedule || DEFAULT_SCHEDULE,
     calendar: Array.isArray(item.calendar) ? item.calendar : DEFAULT_CALENDAR,
     coaches: Array.isArray(item.coaches) && item.coaches.length > 0
@@ -188,6 +241,7 @@ export async function getPublicSettings() {
   const all = await getSettings();
   return {
     packages: all.packages,
+    promotions: all.promotions,
     schedule: all.schedule,
     calendar: all.calendar,
     coaches: all.coaches,

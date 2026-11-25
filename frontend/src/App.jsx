@@ -2,20 +2,26 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/layout/Layout.jsx";
 import ClienteLayout from "./components/layout/ClienteLayout.jsx";
 import ProtectedRoute from "./guards/ProtectedRoute.jsx";
+import RequireProfileComplete from "./guards/RequireProfileComplete.jsx";
 import { ROLES, STAFF_ROLES } from "./constants/theme.js";
 import { useAuth } from "./context/AuthContext.jsx";
 
 import Login from "./pages/Login.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
+import AvisoPrivacidad from "./pages/AvisoPrivacidad.jsx";
 
 // Staff
 import Dashboard from "./pages/Dashboard.jsx";
 import Clientes from "./pages/Clientes/index.jsx";
 import Inventario from "./pages/Inventario.jsx";
 import Nomina from "./pages/Nomina.jsx";
+import Gastos from "./pages/Gastos.jsx";
+import Ingresos from "./pages/Ingresos.jsx";
+import Creditos from "./pages/Creditos.jsx";
 import RutinasClientes from "./pages/RutinasClientes.jsx";
 import RutinasCoach from "./pages/RutinasCoach.jsx";
 import BackofficeContenido from "./pages/BackofficeContenido.jsx";
+import ManualAdministrador from "./pages/ManualAdministrador.jsx";
 
 // Portal cliente
 import MiResumen from "./pages/Cliente/MiResumen.jsx";
@@ -24,6 +30,8 @@ import MisRutinas from "./pages/Cliente/MisRutinas.jsx";
 import Diario from "./pages/Cliente/Diario.jsx";
 import Medidas from "./pages/Cliente/Medidas.jsx";
 import Progreso from "./pages/Cliente/Progreso.jsx";
+import CompletarPerfil from "./pages/Cliente/CompletarPerfil.jsx";
+import ManualUsuario from "./pages/Cliente/ManualUsuario.jsx";
 
 /** Muestra el landing si no hay sesión; redirige al portal según rol si ya está autenticado. */
 function HomeRedirect() {
@@ -42,6 +50,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/aviso-de-privacidad" element={<AvisoPrivacidad />} />
+      <Route path="/privacidad" element={<AvisoPrivacidad />} />
 
       {/* ── Portal STAFF (ADMIN / COACH / RECEP) ── */}
       <Route
@@ -70,6 +80,30 @@ export default function App() {
           }
         />
         <Route
+          path="/gastos"
+          element={
+            <ProtectedRoute roles={[ROLES.ADMIN]}>
+              <Gastos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ingresos"
+          element={
+            <ProtectedRoute roles={[ROLES.ADMIN]}>
+              <Ingresos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/creditos"
+          element={
+            <ProtectedRoute roles={[ROLES.ADMIN]}>
+              <Creditos />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/rutinas/clientes"
           element={
             <ProtectedRoute roles={[ROLES.ADMIN, ROLES.COACH]}>
@@ -93,13 +127,23 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/manual"
+          element={
+            <ProtectedRoute roles={[ROLES.ADMIN]}>
+              <ManualAdministrador />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       {/* ── Portal CLIENTE ── */}
       <Route
         element={
           <ProtectedRoute roles={[ROLES.CLIENTE]}>
-            <ClienteLayout />
+            <RequireProfileComplete>
+              <ClienteLayout />
+            </RequireProfileComplete>
           </ProtectedRoute>
         }
       >
@@ -109,6 +153,8 @@ export default function App() {
         <Route path="/mi/diario" element={<Diario />} />
         <Route path="/mi/medidas" element={<Medidas />} />
         <Route path="/mi/progreso" element={<Progreso />} />
+        <Route path="/mi/completar-perfil" element={<CompletarPerfil />} />
+        <Route path="/mi/ayuda" element={<ManualUsuario />} />
       </Route>
 
       <Route path="/" element={<HomeRedirect />} />

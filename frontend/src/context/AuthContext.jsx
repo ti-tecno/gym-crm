@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { bootstrapSession, login as svcLogin, logout as svcLogout, register as svcRegister } from '../services/auth.service.js';
+import { bootstrapSession, login as svcLogin, loginWithGoogle as svcLoginWithGoogle, logout as svcLogout, register as svcRegister } from '../services/auth.service.js';
 import { tokenStore } from '../utils/tokenStore.js';
 import { jwtDecode } from 'jwt-decode';
 
@@ -30,9 +30,19 @@ export function AuthProvider({ children }) {
     return u;
   }, []);
 
+  const loginWithGoogle = useCallback(async (credential) => {
+    const u = await svcLoginWithGoogle(credential);
+    setUser(u);
+    return u;
+  }, []);
+
   const logout = useCallback(async () => {
     await svcLogout();
     setUser(null);
+  }, []);
+
+  const markProfileComplete = useCallback(() => {
+    setUser((u) => (u ? { ...u, perfilCompleto: true } : u));
   }, []);
 
   const hasRole = useCallback((...roles) => !!user && roles.includes(user.rol), [user]);
@@ -47,8 +57,8 @@ export function AuthProvider({ children }) {
     } catch { return false; }
   }, []);
 
-  const value = useMemo(() => ({ user, loading, login, register, logout, hasRole, isAccessValid }),
-    [user, loading, login, register, logout, hasRole, isAccessValid]);
+  const value = useMemo(() => ({ user, loading, login, register, loginWithGoogle, logout, hasRole, isAccessValid, markProfileComplete }),
+    [user, loading, login, register, loginWithGoogle, logout, hasRole, isAccessValid, markProfileComplete]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

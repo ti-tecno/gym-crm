@@ -53,3 +53,12 @@ export async function lockUser(userId, untilIso) {
     ExpressionAttributeValues: { ':u': untilIso },
   }));
 }
+
+export async function linkGoogleAccount(userId, googleId) {
+  await ddb.send(new UpdateCommand({
+    TableName: TABLES.USERS,
+    Key: { userId },
+    UpdateExpression: 'SET googleId = :g, oauthProvider = :p',
+    ExpressionAttributeValues: { ':g': googleId, ':p': 'google' },
+  }));
+}

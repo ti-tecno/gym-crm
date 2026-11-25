@@ -5,6 +5,7 @@ export const clientePortal = {
   membresia:  ()       => api.get('/cliente/membresia').then(r => r.data),
   rutina:     ()       => api.get('/cliente/rutina').then(r => r.data),
   programas:  ()       => api.get('/cliente/programas').then(r => r.data),
+  asignarRutina: (rutinaId) => api.post('/cliente/rutina/asignar', { rutinaId }).then(r => r.data),
 
   workouts:   (params) => api.get('/cliente/workouts', { params }).then(r => r.data),
   addWorkout: (body)   => api.post('/cliente/workouts', body).then(r => r.data),
@@ -13,4 +14,7 @@ export const clientePortal = {
   addMedida:  (body)   => api.post('/cliente/medidas', body).then(r => r.data),
 
   prs:        ()       => api.get('/cliente/prs').then(r => r.data),
+
+  perfil:       ()       => api.get('/cliente/perfil').then(r => r.data),
+  updatePerfil: (body)   => api.put('/cliente/perfil', body).then(r => r.data),
 };

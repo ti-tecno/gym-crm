@@ -19,9 +19,13 @@ export const NAV_ITEMS = [
   { id: 'clientes',   to: '/clientes',            icon: '◈', label: 'Clientes & Pagos' },
   { id: 'inventario', to: '/inventario',          icon: '▦', label: 'Inventario' },
   { id: 'nomina',     to: '/nomina',              icon: '◎', label: 'Nómina' },
+  { id: 'gastos',     to: '/gastos',              icon: '◍', label: 'Gastos' },
+  { id: 'ingresos',   to: '/ingresos',            icon: '◆', label: 'Ingresos' },
+  { id: 'creditos',   to: '/creditos',            icon: '⚖', label: 'Créditos' },
   { id: 'rutinas',    to: '/rutinas/clientes',    icon: '◷', label: 'Rutinas Clientes' },
   { id: 'coach',      to: '/rutinas/coach',       icon: '◐', label: 'Rutinas Coach' },
   { id: 'contenido',  to: '/admin/contenido',     icon: '⚙', label: 'Backoffice Contenido', adminOnly: true },
+  { id: 'manual',     to: '/admin/manual',        icon: '◌', label: 'Manual', adminOnly: true },
 ];
 
 export const ROLES = { ADMIN: 'ADMIN', COACH: 'COACH', RECEP: 'RECEP', CLIENTE: 'CLIENTE' };
@@ -36,4 +40,6 @@ export const CLIENTE_NAV_ITEMS = [
   { id: 'mi-diario',     to: '/mi/diario',     icon: '✎', label: 'Diario' },
   { id: 'mis-medidas',   to: '/mi/medidas',    icon: '◐', label: 'Medidas' },
   { id: 'mi-progreso',   to: '/mi/progreso',   icon: '◎', label: 'Progreso' },
+  { id: 'mi-perfil',     to: '/mi/completar-perfil', icon: '☺', label: 'Mi Perfil' },
+  { id: 'mi-ayuda',      to: '/mi/ayuda',       icon: '◌', label: 'Ayuda' },
 ];

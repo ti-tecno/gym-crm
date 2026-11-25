@@ -9,7 +9,7 @@ IronCore is a gym management system: a monorepo with a Node.js/Express backend (
 **Tech Stack:**
 - **Backend**: Node.js 20+, Express, AWS DynamoDB (or DynamoDB Local), JWT RS256, Zod, Helmet, Winston; uses ES modules (`"type": "module"`)
 - **Frontend**: React 18.3, Vite 5, React Router DOM, React Hook Form, Zod, DOMPurify, Axios; uses ES modules
-- **Auth**: RS256 asymmetric JWT; access token (15 min) + refresh token (7 days, httpOnly cookie, rotated on every refresh)
+- **Auth**: RS256 asymmetric JWT; access token (15 min) + refresh token (7 days, httpOnly cookie, rotated on every refresh); optional Google OAuth login layered on top of the same session issuance
 - **RBAC Roles**: `ADMIN`, `COACH`, `RECEP` (staff portals), `CLIENTE` (member portal)
 
 ## Quick Start
@@ -60,13 +60,14 @@ Clients can self-register via Login → "Crear cuenta" tab.
 
 ```
 config/          env.js (Zod env validation), dynamo.js (DDB client + TABLES constant), logger.js (Winston)
-middleware/      auth.js (JWT + RBAC + CSRF), errorHandler.js, rateLimiter.js, validate.js (Zod)
-routes/          Express route modules; assembled in routes/index.js
+middleware/      auth.js (JWT + RBAC + CSRF), errorHandler.js, notFound.js, rateLimiter.js, requestId.js, validate.js (Zod)
+routes/          Express route modules; assembled in routes/index.js (auth, dashboard, clientes, pagos, inventario, nomina, gastos, ingresos, creditos, rutinas, recordatorios, settings, upload, cliente)
 controllers/     Request handlers; delegate to repos/services
 services/        jwt.service.js, password.service.js
 repositories/    DynamoDB queries; no ORM
 validators/      Zod schemas applied via validate() middleware
-scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js
+utils/           perfil.js (isPerfilCompleto — profile-questionnaire completeness rules), dates.js
+scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js, importWorkbook.js / importMembers.js / importGastos.js / importIngresos.js / importInscripciones.js (one-off legacy data imports, see below), dedupeClientes.js
 ```
 
 **Flow**: Route → `requireAuth` + `requireRole` + `requireCsrf` + `validate(schema)` → Controller → Repository/Service
@@ -80,24 +81,32 @@ scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js
 
 **Patterns:**
 - DynamoDB queries always use `ExpressionAttributeNames` + `ExpressionAttributeValues` (no interpolation). Import `ddb` and `TABLES` from `config/dynamo.js`.
-- All endpoints have a Zod schema applied at the middleware layer via `validate(schema)`
+- Most endpoints have a Zod schema applied at the middleware layer via `validate(schema)`. Exceptions: `dashboard`, `upload`, and `settings` routes — `settings.controller.js` normalizes/coerces each field by hand instead, so new settings sections must follow that pattern (or add a validator)
+- `env.js` loads `backend/.env` and resolves relative key paths (`JWT_*_KEY_PATH`) relative to `backend/`, not `process.cwd()` (pm2/systemd may start from another directory). `server.js` serves HTTPS when `TLS_KEY_PATH`/`TLS_CERT_PATH` exist, otherwise falls back to HTTP
+- Health check (`GET /health` and `GET /api/v1/health`) is mounted in `app.js` *before* Helmet/CORS with `Access-Control-Allow-Origin: *` so external monitors are never blocked — keep it above those middlewares
 - Failed login attempts tracked; account locked after 5 failures for 15 min; bcrypt saltRounds=12
+- Google OAuth (`auth.controller.js`'s `googleLogin`): verifies the ID token server-side with `google-auth-library` against `GOOGLE_CLIENT_ID`, requires `email_verified`, then looks up the existing `gym_users` record by email — it never creates accounts, so users must register (password or manually) before "Sign in with Google" works. On first successful Google login it opportunistically sets `googleId`/`oauthProvider` on the user via `linkGoogleAccount` (`users.repo.js`); this link is best-effort and failures are only logged, not fatal. Gated by a dedicated `googleAuthLimiter` (`middleware/rateLimiter.js`) and by `googleClient` being non-null (i.e. `GOOGLE_CLIENT_ID` set) — otherwise the endpoint returns 503 `GOOGLE_AUTH_DISABLED`.
 - Logs via Winston with automatic redaction of `password`, `token`, `cc` fields
 - `HttpError(status, code, message)` is the standard way to pass errors to `next()`
+- File uploads (`upload.routes.js`/`upload.controller.js`) use `multer` disk storage, writing to `backend/public/uploads/<category>/` (currently coach images) with a mime allowlist and 5MB limit; served as static files from `backend/public/`
+- `gym_settings` backs the public landing page and admin "Contenido" backoffice via `settings.routes.js`: `GET /settings/public` (unauthenticated — the only table read by an unauthenticated route), `GET /settings/admin`, and one `PUT /settings/admin/<section>` per section (`packages`, `promotions`, `schedule`, `calendar`, `coaches`), each saved through `settings.repo.js`'s `saveSettings()`
+- Profile completeness: `auth.controller.js` returns `perfilCompleto` (from `utils/perfil.js`) on login/refresh for CLIENTE users. Accounts created by staff, before the registration questionnaire existed, or via Google login are typically incomplete until completed through `PUT /cliente/perfil`
 
 ### Frontend (`frontend/src/`)
 
 ```
 context/AuthContext.jsx    useAuth() hook; login/logout/register/hasRole/isAccessValid
 guards/ProtectedRoute.jsx  Role check + token expiry; redirects to /login if unauthorized
-pages/                     Clientes/ (staff views), Cliente/ (member portal), plus top-level pages
+guards/RequireProfileComplete.jsx  Wraps the CLIENTE tree; forces users with perfilCompleto === false to /mi/completar-perfil
+pages/                     Clientes/ (staff views), Cliente/ (member portal), LandingPage.jsx (public), BackofficeContenido.jsx (admin content editor), plus top-level pages
 components/layout/         Layout + Sidebar (staff), ClienteLayout + ClienteSidebar (member portal)
-services/                  api.js (axios client with interceptors), *.service.js per domain
+components/ui/             Shared primitives: Avatar, Badge, FInput, SectionHeader, StatCard, TabBar
+services/                  api.js (axios client with interceptors), auth.service.js, cliente.service.js, modules.service.js (dashboard/clientes/pagos/inventario/nomina/rutinas/recordatorios/settings services, grouped in one file)
 utils/                     tokenStore.js (in-memory JWT), sanitize.js (DOMPurify), safeRoute.js
 constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITEMS, CLIENTE_NAV_ITEMS
 ```
 
-**Dual-layout routing**: `App.jsx` has two separate `<Route>` trees. Staff roles (`ADMIN`, `COACH`, `RECEP`) use `<Layout>` with `Sidebar`. `CLIENTE` uses `<ClienteLayout>` with `ClienteSidebar`. Routes under `/mi/*` are client-only; routes under `/dashboard`, `/clientes/*`, `/inventario`, `/nomina`, `/rutinas/*`, `/admin/*` are staff-only.
+**Dual-layout routing**: `App.jsx` has two separate `<Route>` trees. Staff roles (`ADMIN`, `COACH`, `RECEP`) use `<Layout>` with `Sidebar`. `CLIENTE` uses `<ClienteLayout>` with `ClienteSidebar`. Routes under `/mi/*` are client-only; routes under `/dashboard`, `/clientes/*`, `/inventario`, `/nomina`, `/rutinas/*`, `/admin/*` are staff-only. `/` renders `LandingPage` (public marketing page, driven by `gym_settings`) when there's no session, or redirects to the correct portal when there is one. `/admin/contenido` (ADMIN only) edits the landing page's packages/promotions/coaches/schedule/calendar content. In-app user manuals live at `/admin/manual` (`ManualAdministrador.jsx`, ADMIN) and `/mi/ayuda` (`Cliente/ManualUsuario.jsx`) — update them when changing user-facing flows they describe.
 
 **Patterns:**
 - JWT stored in memory only via `tokenStore.js` (never localStorage); on page reload, `AuthContext` bootstraps from the httpOnly refresh cookie
@@ -105,6 +114,7 @@ constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITE
 - CSRF double-submit: `csrfToken` cookie is readable by JS (not httpOnly) so the client reads it and sends it as `X-CSRF-Token` header on mutating requests
 - All dynamic HTML passes through DOMPurify (`utils/sanitize.js`) before render
 - Forms: React Hook Form + Zod resolver
+- Google OAuth: `main.jsx` wraps the app in `GoogleOAuthProvider` (from `@react-oauth/google`) keyed by `VITE_GOOGLE_CLIENT_ID`; `Login.jsx` renders the Google button and `auth.service.js`'s `googleLogin()` posts the credential to `POST /auth/google` — same session/cookie flow as password login from there on
 
 ### Data Model (DynamoDB tables, prefix `gym_`)
 
@@ -115,6 +125,9 @@ constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITE
 | `gym_pagos` | pagoId | clienteId, fecha |
 | `gym_inventario` | itemId | categoria |
 | `gym_nomina` | empleadoId | estado |
+| `gym_gastos` | gastoId | fecha |
+| `gym_ingresos` | ingresoId | fecha |
+| `gym_creditos` | creditoId | clienteId, fecha |
 | `gym_rutinas_clientes` | rutinaId | clienteId |
 | `gym_rutinas_coach` | rutinaId | — |
 | `gym_recordatorios` | recordatorioId | clienteId, estado |
@@ -124,6 +137,10 @@ constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITE
 | `gym_settings` | — | — |
 | `gym_refresh_tokens` | jti | — |
 | `gym_login_attempts` | — | — |
+
+`createTables.js` also provisions a set of legacy tables (`gym_planes`, `gym_inscripciones`, `gym_membresias`, `gym_productos`, `gym_venta_pedidos`, `gym_venta_detalles`, `gym_inventario_movimientos`, `gym_credito_abonos`) that exist solely as the target schema for `importWorkbook.js`. No route, controller, or repository in the live app reads or writes them — don't treat their presence as evidence of an active feature. (`gym_gastos` and `gym_creditos` used to be in this list but now back the live `gastos.routes.js` and `creditos.routes.js` CRUD features respectively.)
+
+**Créditos data note**: `gym_creditos` was originally populated by a one-off `importWorkbook.js` run against the legacy "Iron core gym" Excel workbook (24 items, `sourceSheet: 'credito'`). Items from that import carry a real `clienteId` FK (resolved to a name via `gym_clientes` at read time in `creditos.repo.js`); items created through the live UI instead store the name directly in `legacyUsuario`. Both paths are merged into a single `cliente` display field on read — don't assume every row has a `clienteId`. `credito.csv` in the repo root is a CSV export of that same already-imported "credito" sheet — re-importing it would duplicate data, so there's no `db:import:credito` script.
 
 ## Adding a New Backend Endpoint
 
@@ -143,17 +160,24 @@ constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITE
 ## Database Scripts
 
 ```bash
-npm run db:create      # Create all tables (idempotent)
-npm run db:seed        # Load demo data
-npm run db:clear-seed  # Remove seeded data only (keeps tables)
-npm run db:reset       # Drop + recreate all tables, then seed
+npm run db:create          # Create all tables (idempotent)
+npm run db:seed            # Load demo data
+npm run db:clear-seed      # Remove seeded data only (keeps tables)
+npm run db:reset           # Drop + recreate all tables, then seed
+npm run db:import:workbook # One-off import of legacy "Iron core gym" Excel workbook into DynamoDB (pass a path, or --dry-run)
+npm run db:import:members  # One-off import of ironmembers.csv into gym_clientes (pass a path, or --dry-run)
+npm run db:import:gastos   # One-off import of gastos.csv into gym_gastos (pass a path, or --dry-run)
+npm run db:import:ingresos # One-off import of ingresos.csv into gym_ingresos (pass a path, or --dry-run)
+npm run db:import:inscripciones # One-off import of inscripciones.csv (despite the name, it's counter/vending product sales, not membership sign-ups) into gym_ingresos alongside ingresos.csv (pass a path, or --dry-run)
+npm run db:backfill:mensualidad # One-off: for each gym_clientes record, finds its latest membership-type payment in gym_ingresos (by exact normalized name match) and sets monto/tipoMensualidad/vencimiento/estado from it (--dry-run supported). Classification of which ingresos descriptions count as a membership payment (vs. counter sales) is a hardcoded lookup table inside the script, built from a manual review of gym_ingresos at the time it was written — re-run only after re-checking that list still covers current data.
+npm run db:dedupe:clientes # Merge duplicate gym_clientes records (matched by name/email) and repoint pagos/rutinas/recordatorios/medidas/workouts/prs to the survivor (--dry-run supported)
 ```
 
 No migration framework; schema changes require `db:reset`.
 
 ## Linting & Tests
 
-No linting or test framework is configured yet. `package.json` has placeholder scripts. To add:
+No linting or test framework is configured yet. `package.json` has placeholder scripts; verification is manual (see `docs/QA-TEST-PLAN.md`) plus `npm run build` in `frontend/`. To add:
 - **Linting**: `eslint` with `.eslintrc.json`
 - **Backend tests**: `vitest` + `backend/src/**/*.test.js`
 - **Frontend tests**: `vitest` + React Testing Library
@@ -170,7 +194,9 @@ See `backend/.env.example` for all variables. Critical ones:
 | `JWT_PUBLIC_KEY_PATH` | Path to RS256 public key |
 | `CORS_ORIGINS` | Comma-separated allowed origins |
 | `COOKIE_SECURE` | Set `true` in production (HTTPS only) |
+| `GOOGLE_CLIENT_ID` | (backend, optional) Google OAuth client ID; omitting it disables `POST /auth/google` (returns 503) |
 | `VITE_API_URL` | (frontend) Backend base URL |
+| `VITE_GOOGLE_CLIENT_ID` | (frontend, optional) Must match backend `GOOGLE_CLIENT_ID` for the Google login button to work |
 
 ## Security Notes
 

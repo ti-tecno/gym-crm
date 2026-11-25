@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext.jsx";
 import { COLORS } from "../constants/theme.js";
 import FInput from "../components/ui/FInput.jsx";
@@ -17,19 +18,9 @@ const loginSchema = z.object({
 const registerSchema = z
   .object({
     nombre: z.string().trim().min(2, "Mínimo 2").max(60),
-    apellido: z
-      .string()
-      .trim()
-      .min(2, "Mínimo 2")
-      .max(60)
-      .optional()
-      .or(z.literal("")),
+    apellido: z.string().trim().min(2, "Mínimo 2").max(60),
     email: z.string().email("Email inválido").max(120),
-    telefono: z
-      .string()
-      .regex(/^[\d\s\-()+]{7,20}$/, "Teléfono inválido")
-      .optional()
-      .or(z.literal("")),
+    telefono: z.string().regex(/^[\d\s\-()+]{7,20}$/, "Teléfono inválido"),
     password: z
       .string()
       .min(8, "Mínimo 8 caracteres")
@@ -38,11 +29,120 @@ const registerSchema = z
       .regex(/[a-z]/, "Incluye una minúscula")
       .regex(/\d/, "Incluye un número"),
     confirm: z.string().min(8).max(128),
-    plan: z.enum(["Básico", "Premium", "Elite"]),
+    plan: z.enum(["Mensual", "Estudiante", "Trimestre", "Semestre", "Anual"]),
+    fechaNacimiento: z.string().min(1, "Requerido"),
+    edad: z.string().min(1, "Requerido"),
+    genero: z.enum(["H", "M", "Otro"], {
+      errorMap: () => ({ message: "Requerido" }),
+    }),
+    estudiante: z.boolean().optional(),
+    // Sólo obligatoria si "estudiante" es Sí — ver superRefine
+    matricula: z.string().max(40).optional().or(z.literal("")),
+    peso: z.string().min(1, "Requerido"),
+    grupoSanguineo: z.string().trim().min(1, "Requerido").max(12),
+    alergiaTiene: z.enum(["si", "no"], { errorMap: () => ({ message: "Requerido" }) }),
+    // Sólo obligatorio si "alergiaTiene" es "si" — ver superRefine
+    alergiaDetalle: z.string().trim().max(120).optional().or(z.literal("")),
+    emergenciaNombre: z.string().trim().min(2, "Mínimo 2").max(60),
+    emergenciaParentesco: z.string().trim().min(2, "Mínimo 2").max(40),
+    emergenciaTelefono: z
+      .string()
+      .regex(/^[\d\s\-()+]{7,20}$/, "Teléfono inválido"),
+    cardiaco: z.boolean().optional(),
+    pecho: z.boolean().optional(),
+    ahogo: z.boolean().optional(),
+    mareo: z.boolean().optional(),
+    neurologico: z.boolean().optional(),
+    respiratorio: z.boolean().optional(),
+    osteoarticular: z.boolean().optional(),
+    dolorReciente: z.boolean().optional(),
+    factoresRiesgo: z
+      .string()
+      .trim()
+      .min(1, "Requerido, escribe 'Ninguno' si no aplica")
+      .max(240),
+    medicamentoTiene: z.enum(["si", "no"], { errorMap: () => ({ message: "Requerido" }) }),
+    // Sólo obligatorio si "medicamentoTiene" es "si" — ver superRefine
+    medicamentoDetalle: z.string().trim().max(240).optional().or(z.literal("")),
+    otroPadecimientoTiene: z.enum(["si", "no"], { errorMap: () => ({ message: "Requerido" }) }),
+    // Sólo obligatorio si "otroPadecimientoTiene" es "si", u obligatorio "si" si alguna
+    // condición de salud está marcada — ver superRefine
+    otroPadecimientoDetalle: z.string().trim().max(240).optional().or(z.literal("")),
+    actividadHabitual: z.boolean().optional(),
+    // Sólo obligatorias si "actividadHabitual" es Sí — ver superRefine
+    actividadTipo: z.string().max(80).optional().or(z.literal("")),
+    frecuenciaSemanal: z.string().optional(),
+    tiempoSesion: z.string().max(40).optional().or(z.literal("")),
+    ultimaVezPrograma: z.string().trim().min(1, "Requerido").max(80),
+    beneficios: z.array(z.string()).min(1, "Selecciona al menos un beneficio"),
+    aceptoPrivacidad: z.boolean().refine(Boolean, "Debes aceptar el aviso de privacidad"),
+    aceptoResponsiva: z.boolean().refine(Boolean, "Debes aceptar la responsiva"),
   })
   .refine((d) => d.password === d.confirm, {
     path: ["confirm"],
     message: "No coinciden",
+  })
+  .superRefine((d, ctx) => {
+    if (d.estudiante && !d.matricula?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["matricula"],
+        message: "Requerido si eres estudiante",
+      });
+    }
+    if (d.alergiaTiene === "si" && !d.alergiaDetalle?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["alergiaDetalle"],
+        message: "Especifica la alergia",
+      });
+    }
+    if (d.medicamentoTiene === "si" && !d.medicamentoDetalle?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["medicamentoDetalle"],
+        message: "Especifica el medicamento y dosis",
+      });
+    }
+    if (d.actividadHabitual) {
+      if (!d.actividadTipo?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["actividadTipo"],
+          message: "Requerido si practicas actividad física",
+        });
+      }
+      if (!d.frecuenciaSemanal?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["frecuenciaSemanal"],
+          message: "Requerido si practicas actividad física",
+        });
+      }
+      if (!d.tiempoSesion?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["tiempoSesion"],
+          message: "Requerido si practicas actividad física",
+        });
+      }
+    }
+    const tieneCondicionSalud =
+      d.cardiaco ||
+      d.pecho ||
+      d.ahogo ||
+      d.mareo ||
+      d.neurologico ||
+      d.respiratorio ||
+      d.osteoarticular ||
+      d.dolorReciente;
+    if (tieneCondicionSalud && !d.otroPadecimiento?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["otroPadecimiento"],
+        message: "Describe la condición marcada arriba",
+      });
+    }
   });
 
 // ── Rate limit cliente: 3 intentos / 60s ──
@@ -61,9 +161,90 @@ function attemptsLeft() {
 }
 
 const PLANES = [
-  { id: "Básico", precio: 450, color: COLORS.blue },
-  { id: "Premium", precio: 850, color: COLORS.accent },
-  { id: "Elite", precio: 1200, color: COLORS.purple },
+  { id: "Mensual", precio: 500, periodo: "mes", color: COLORS.blue },
+  { id: "Estudiante", precio: 400, periodo: "mes", color: COLORS.green },
+  { id: "Trimestre", precio: 1450, periodo: "trimestre", color: COLORS.accent },
+  { id: "Semestre", precio: 2500, periodo: "semestre", color: COLORS.purple },
+  { id: "Anual", precio: 2999, periodo: "año", color: "#E8A33D" },
+];
+
+const BENEFICIOS = [
+  "Salud y bienestar",
+  "Recreación",
+  "Acondicionamiento físico",
+  "Aumento de masa muscular",
+  "Bajar de peso",
+  "Rendimiento deportivo",
+];
+
+const GENEROS = [
+  { id: "H", label: "Hombre" },
+  { id: "M", label: "Mujer" },
+  { id: "Otro", label: "Otro" },
+];
+
+const CHECKS_SALUD = [
+  ["cardiaco", "Problema cardiaco"],
+  ["pecho", "Molestia al ejercicio"],
+  ["ahogo", "Ahogo o fatiga leve"],
+  ["mareo", "Mareo / desmayos"],
+  ["neurologico", "Problema neurológico"],
+  ["respiratorio", "Problema respiratorio"],
+  ["osteoarticular", "Problemas músculo-articulares"],
+  ["dolorReciente", "Dolor reciente"],
+];
+
+function parseOptionalNumber(value) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+const STEP_1_FIELDS = [
+  "nombre",
+  "apellido",
+  "email",
+  "telefono",
+  "fechaNacimiento",
+  "edad",
+  "genero",
+  "estudiante",
+  "matricula",
+  "peso",
+];
+
+const STEP_2_FIELDS = [
+  "grupoSanguineo",
+  "alergiaTiene",
+  "alergiaDetalle",
+  "emergenciaNombre",
+  "emergenciaParentesco",
+  "emergenciaTelefono",
+  "cardiaco",
+  "pecho",
+  "ahogo",
+  "mareo",
+  "neurologico",
+  "respiratorio",
+  "osteoarticular",
+  "dolorReciente",
+  "factoresRiesgo",
+  "medicamentoActual",
+  "otroPadecimiento",
+];
+
+const STEP_3_FIELDS = [
+  "actividadHabitual",
+  "actividadTipo",
+  "frecuenciaSemanal",
+  "tiempoSesion",
+  "ultimaVezPrograma",
+  "beneficios",
+  "aceptoPrivacidad",
+  "password",
+  "confirm",
+  "aceptoResponsiva",
 ];
 
 // Si el rol es CLIENTE forzamos su home aunque venga otro `next`
@@ -74,9 +255,11 @@ function homeForRol(rol) {
 export default function Login() {
   const [mode, setMode] = useState("login"); // 'login' | 'register'
   const [serverError, setServerError] = useState("");
-  const [planSel, setPlanSel] = useState("Premium");
+  const [googleError, setGoogleError] = useState("");
+  const [planSel, setPlanSel] = useState("Trimestre");
+  const [registerStep, setRegisterStep] = useState(1);
 
-  const { login, register: doRegister } = useAuth();
+  const { login, register: doRegister, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
 
@@ -96,9 +279,45 @@ export default function Login() {
       telefono: "",
       password: "",
       confirm: "",
-      plan: "Premium",
+      plan: "Trimestre",
+      fechaNacimiento: "",
+      edad: "",
+      genero: "",
+      estudiante: false,
+      matricula: "",
+      peso: "",
+      grupoSanguineo: "",
+      alergiaTiene: "",
+      alergiaDetalle: "",
+      emergenciaNombre: "",
+      emergenciaParentesco: "",
+      emergenciaTelefono: "",
+      cardiaco: false,
+      pecho: false,
+      ahogo: false,
+      mareo: false,
+      neurologico: false,
+      respiratorio: false,
+      osteoarticular: false,
+      dolorReciente: false,
+      factoresRiesgo: "",
+      medicamentoActual: "",
+      otroPadecimiento: "",
+      actividadHabitual: false,
+      actividadTipo: "",
+      frecuenciaSemanal: "",
+      tiempoSesion: "",
+      ultimaVezPrograma: "",
+      beneficios: [],
+      aceptoPrivacidad: false,
+      aceptoResponsiva: false,
     },
   });
+
+  const goRegisterStep = async (nextStep, fields) => {
+    const ok = await regForm.trigger(fields);
+    if (ok) setRegisterStep(nextStep);
+  };
 
   const goAfterLogin = (rol) => {
     const nextParam = params.get("next");
@@ -127,14 +346,71 @@ export default function Login() {
     }
   };
 
+  const onGoogleSuccess = async (credentialResponse) => {
+    setServerError("");
+    setGoogleError("");
+    try {
+      const u = await loginWithGoogle(credentialResponse.credential);
+      goAfterLogin(u.rol);
+    } catch (e) {
+      const code = e?.response?.data?.code;
+      setGoogleError(
+        code === "NO_ACCOUNT"
+          ? "No encontramos una cuenta con ese correo de Google."
+          : e?.response?.data?.error || "No fue posible iniciar sesión con Google",
+      );
+    }
+  };
+
   const onRegister = async (data) => {
     setServerError("");
     try {
+      const fechaHoy = new Date();
+      const fechaRegistro = fechaHoy.toISOString().slice(0, 10);
       const payload = {
         nombre: data.nombre.trim(),
         email: data.email.trim().toLowerCase(),
         password: data.password,
         plan: planSel,
+        inscripcion: {
+          fecha: fechaRegistro,
+          fechaNacimiento: data.fechaNacimiento || undefined,
+          edad: parseOptionalNumber(data.edad),
+          genero: data.genero || undefined,
+          estudiante: !!data.estudiante,
+          peso: parseOptionalNumber(data.peso),
+          matricula: data.matricula?.trim() || undefined,
+          grupoSanguineo: data.grupoSanguineo?.trim() || undefined,
+          alergiaMedicamentos: data.alergiaTiene === "si" ? data.alergiaDetalle?.trim() || undefined : "Ninguna",
+          emergencia: {
+            nombre: data.emergenciaNombre?.trim() || undefined,
+            parentesco: data.emergenciaParentesco?.trim() || undefined,
+            telefono: data.emergenciaTelefono?.trim() || undefined,
+          },
+          salud: {
+            cardiaco: !!data.cardiaco,
+            pecho: !!data.pecho,
+            ahogo: !!data.ahogo,
+            mareo: !!data.mareo,
+            neurologico: !!data.neurologico,
+            respiratorio: !!data.respiratorio,
+            osteoarticular: !!data.osteoarticular,
+            dolorReciente: !!data.dolorReciente,
+            factoresRiesgo: data.factoresRiesgo?.trim() || undefined,
+            medicamentoActual: data.medicamentoActual?.trim() || undefined,
+            otroPadecimiento: data.otroPadecimiento?.trim() || undefined,
+          },
+          habitos: {
+            actividadHabitual: !!data.actividadHabitual,
+            actividadTipo: data.actividadTipo?.trim() || undefined,
+            frecuenciaSemanal: parseOptionalNumber(data.frecuenciaSemanal),
+            tiempoSesion: data.tiempoSesion?.trim() || undefined,
+            ultimaVezPrograma: data.ultimaVezPrograma?.trim() || undefined,
+            beneficios: data.beneficios || [],
+            aceptoPrivacidad: !!data.aceptoPrivacidad,
+            aceptoResponsiva: !!data.aceptoResponsiva,
+          },
+        },
       };
       if (data.apellido?.trim()) payload.apellido = data.apellido.trim();
       if (data.telefono?.trim()) payload.telefono = data.telefono.trim();
@@ -170,7 +446,7 @@ export default function Login() {
           border: `1px solid ${COLORS.border}`,
           borderRadius: 16,
           padding: 32,
-          width: mode === "register" ? 460 : 380,
+          width: mode === "register" ? 760 : 380,
           maxWidth: "100%",
         }}
       >
@@ -237,6 +513,7 @@ export default function Login() {
               onClick={() => {
                 setMode(t.id);
                 setServerError("");
+                if (t.id === "register") setRegisterStep(1);
               }}
               style={{
                 flex: 1,
@@ -318,128 +595,160 @@ export default function Login() {
                 color: COLORS.muted,
                 lineHeight: 1.7,
               }}
-            ></div>
+            >
+              <Link
+                to="/aviso-de-privacidad"
+                style={{
+                  color: COLORS.accent,
+                  fontWeight: 600,
+                  textDecoration: "underline",
+                  textDecorationColor: `${COLORS.accent}66`,
+                  textUnderlineOffset: 3,
+                }}
+              >
+                Ver aviso de privacidad
+              </Link>
+            </div>
           </form>
         )}
 
-        {mode === "register" && (
-          <form onSubmit={regForm.handleSubmit(onRegister)} noValidate>
+        {mode === "login" && (
+          <div style={{ marginTop: 18 }}>
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-                marginBottom: 12,
-              }}
-            >
-              <FInput
-                label="Nombre"
-                placeholder="Juan"
-                {...regForm.register("nombre")}
-                error={regForm.formState.errors.nombre?.message}
-              />
-              <FInput
-                label="Apellido"
-                placeholder="García"
-                {...regForm.register("apellido")}
-                error={regForm.formState.errors.apellido?.message}
-              />
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-                marginBottom: 12,
-              }}
-            >
-              <FInput
-                label="Email"
-                placeholder="correo@ejemplo.com"
-                type="email"
-                {...regForm.register("email")}
-                error={regForm.formState.errors.email?.message}
-              />
-              <FInput
-                label="WhatsApp"
-                placeholder="555-000-0000"
-                {...regForm.register("telefono")}
-                error={regForm.formState.errors.telefono?.message}
-              />
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-                marginBottom: 14,
-              }}
-            >
-              <FInput
-                label="Contraseña"
-                placeholder="Mín. 8, A-a-9"
-                type="password"
-                {...regForm.register("password")}
-                error={regForm.formState.errors.password?.message}
-              />
-              <FInput
-                label="Confirmar"
-                placeholder="Repite"
-                type="password"
-                {...regForm.register("confirm")}
-                error={regForm.formState.errors.confirm?.message}
-              />
-            </div>
-
-            <label
-              style={{
+                textAlign: "center",
                 color: COLORS.muted,
                 fontSize: 11,
-                letterSpacing: 1.5,
-                textTransform: "uppercase",
-                fontFamily: "'DM Mono',monospace",
+                marginBottom: 12,
               }}
             >
-              Plan inicial
-            </label>
+              o continúa con
+            </div>
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <GoogleLogin
+                onSuccess={onGoogleSuccess}
+                onError={() =>
+                  setGoogleError("No fue posible iniciar sesión con Google")
+                }
+                theme="filled_black"
+                width="320"
+              />
+            </div>
+            {googleError && (
+              <div
+                style={{
+                  marginTop: 10,
+                  color: COLORS.red,
+                  background: "#2b0d0d",
+                  border: `1px solid ${COLORS.red}44`,
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  fontSize: 12,
+                }}
+              >
+                {googleError}{" "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("register");
+                    setServerError("");
+                    setGoogleError("");
+                  }}
+                  style={{
+                    color: COLORS.accent,
+                    background: "none",
+                    border: "none",
+                    textDecoration: "underline",
+                    cursor: "pointer",
+                    padding: 0,
+                    fontSize: 12,
+                  }}
+                >
+                  Crear cuenta
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {mode === "register" && (
+          <form
+            onSubmit={regForm.handleSubmit(onRegister)}
+            noValidate
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && registerStep < 3) {
+                e.preventDefault();
+              }
+            }}
+          >
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3,1fr)",
+                display: "flex",
+                alignItems: "center",
                 gap: 8,
-                marginTop: 6,
-                marginBottom: 14,
+                marginBottom: 18,
               }}
             >
-              {PLANES.map((p) => {
-                const on = planSel === p.id;
+              {["Datos", "Salud", "Confirmar"].map((label, index) => {
+                const stepNumber = index + 1;
+                const active = registerStep === stepNumber;
+                const done = registerStep > stepNumber;
                 return (
-                  <button
-                    type="button"
-                    key={p.id}
-                    onClick={() => setPlanSel(p.id)}
+                  <div
+                    key={label}
                     style={{
-                      padding: "10px 6px",
-                      borderRadius: 10,
-                      background: on ? `${p.color}18` : COLORS.surface,
-                      border: `2px solid ${on ? p.color : COLORS.border}`,
-                      color: on ? p.color : COLORS.muted,
-                      cursor: "pointer",
-                      fontFamily: "'Barlow Condensed',sans-serif",
-                      fontWeight: on ? 700 : 500,
+                      display: "flex",
+                      alignItems: "center",
+                      flex: stepNumber < 3 ? 1 : "none",
                     }}
                   >
-                    <div style={{ fontSize: 13 }}>{p.id}</div>
                     <div
                       style={{
-                        fontSize: 11,
-                        fontFamily: "'DM Mono',monospace",
-                        marginTop: 2,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 4,
                       }}
                     >
-                      ${p.precio}/mes
+                      <div
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: "50%",
+                          display: "grid",
+                          placeItems: "center",
+                          background: done
+                            ? COLORS.green
+                            : active
+                              ? COLORS.accent
+                              : COLORS.border,
+                          color: done || active ? "#000" : COLORS.muted,
+                          fontSize: 12,
+                          fontWeight: 800,
+                        }}
+                      >
+                        {done ? "✓" : stepNumber}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: active ? COLORS.accent : COLORS.muted,
+                        }}
+                      >
+                        {label}
+                      </span>
                     </div>
-                  </button>
+                    {stepNumber < 3 && (
+                      <div
+                        style={{
+                          flex: 1,
+                          height: 2,
+                          margin: "0 8px 18px",
+                          background: done ? COLORS.green : COLORS.border,
+                        }}
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -453,48 +762,810 @@ export default function Login() {
                   borderRadius: 8,
                   padding: "8px 12px",
                   fontSize: 12,
-                  marginBottom: 10,
+                  marginBottom: 14,
                 }}
               >
                 {serverError}
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={regForm.formState.isSubmitting}
-              style={{
-                width: "100%",
-                background: COLORS.green,
-                color: "#000",
-                border: "none",
-                borderRadius: 10,
-                padding: "12px 0",
-                fontWeight: 800,
-                fontSize: 15,
-                cursor: regForm.formState.isSubmitting
-                  ? "not-allowed"
-                  : "pointer",
-                opacity: regForm.formState.isSubmitting ? 0.6 : 1,
-                fontFamily: "'Barlow Condensed',sans-serif",
-              }}
-            >
-              {regForm.formState.isSubmitting
-                ? "Creando cuenta…"
-                : "✓ Crear cuenta y entrar"}
-            </button>
+            {registerStep === 1 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <FInput
+                    label="Nombre *"
+                    placeholder="Juan"
+                    {...regForm.register("nombre")}
+                    error={regForm.formState.errors.nombre?.message}
+                  />
+                  <FInput
+                    label="Apellido *"
+                    placeholder="García"
+                    {...regForm.register("apellido")}
+                    error={regForm.formState.errors.apellido?.message}
+                  />
+                </div>
 
-            <div
-              style={{
-                marginTop: 12,
-                fontSize: 11,
-                color: COLORS.muted,
-                lineHeight: 1.6,
-              }}
-            >
-              Al crear tu cuenta aceptas los términos. Tu membresía queda como{" "}
-              <strong>Por vencer</strong> hasta tu primer pago en recepción.
-            </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <FInput
+                    label="Email *"
+                    placeholder="correo@ejemplo.com"
+                    type="email"
+                    {...regForm.register("email")}
+                    error={regForm.formState.errors.email?.message}
+                  />
+                  <FInput
+                    label="WhatsApp *"
+                    placeholder="555-000-0000"
+                    {...regForm.register("telefono")}
+                    error={regForm.formState.errors.telefono?.message}
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1.1fr .8fr .8fr", gap: 12 }}>
+                  <FInput
+                    label="Fecha de nacimiento *"
+                    type="date"
+                    {...regForm.register("fechaNacimiento")}
+                    error={regForm.formState.errors.fechaNacimiento?.message}
+                  />
+                  <FInput
+                    label="Edad *"
+                    type="number"
+                    inputMode="numeric"
+                    {...regForm.register("edad")}
+                    error={regForm.formState.errors.edad?.message}
+                  />
+                  <FInput
+                    label="Peso (kg) *"
+                    type="number"
+                    inputMode="decimal"
+                    {...regForm.register("peso")}
+                    error={regForm.formState.errors.peso?.message}
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label
+                      style={{
+                        color: COLORS.muted,
+                        fontSize: 11,
+                        letterSpacing: 1.5,
+                        textTransform: "uppercase",
+                        fontFamily: "'DM Mono',monospace",
+                      }}
+                    >
+                      Género *
+                    </label>
+                    <select
+                      {...regForm.register("genero")}
+                      style={{
+                        background: COLORS.surface,
+                        border: `1px solid ${regForm.formState.errors.genero ? COLORS.red : COLORS.border}`,
+                        borderRadius: 9,
+                        padding: "10px 14px",
+                        color: COLORS.text,
+                        fontSize: 13,
+                        outline: "none",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <option value="">Seleccionar…</option>
+                      {GENEROS.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.label}
+                        </option>
+                      ))}
+                    </select>
+                    {regForm.formState.errors.genero?.message && (
+                      <span style={{ color: COLORS.red, fontSize: 11 }}>
+                        {regForm.formState.errors.genero.message}
+                      </span>
+                    )}
+                  </div>
+
+                  <label
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                      color: COLORS.muted,
+                      fontSize: 11,
+                      letterSpacing: 1.5,
+                      textTransform: "uppercase",
+                      fontFamily: "'DM Mono',monospace",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    Estudiante
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        background: COLORS.surface,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: 9,
+                        padding: "11px 14px",
+                        color: COLORS.text,
+                        textTransform: "none",
+                        fontSize: 13,
+                        letterSpacing: 0,
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        {...regForm.register("estudiante")}
+                        style={{ accentColor: COLORS.accent }}
+                      />
+                      Sí, aún estudio
+                    </span>
+                  </label>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <FInput
+                    label="Matrícula"
+                    placeholder="Obligatoria si eres estudiante"
+                    {...regForm.register("matricula")}
+                    error={regForm.formState.errors.matricula?.message}
+                  />
+                  <div
+                    style={{
+                      background: COLORS.surface,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: 9,
+                      padding: "10px 14px",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      gap: 2,
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: COLORS.muted,
+                        fontSize: 11,
+                        letterSpacing: 1.5,
+                        textTransform: "uppercase",
+                        fontFamily: "'DM Mono',monospace",
+                      }}
+                    >
+                      Plan elegido
+                    </span>
+                    <strong style={{ color: COLORS.text, fontFamily: "'Barlow Condensed',sans-serif", fontSize: 18 }}>
+                      {planSel}
+                    </strong>
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(90px, 1fr))", gap: 8 }}>
+                  {PLANES.map((p) => {
+                    const on = planSel === p.id;
+                    return (
+                      <button
+                        type="button"
+                        key={p.id}
+                        onClick={() => setPlanSel(p.id)}
+                        style={{
+                          padding: "10px 6px",
+                          borderRadius: 10,
+                          background: on ? `${p.color}18` : COLORS.surface,
+                          border: `2px solid ${on ? p.color : COLORS.border}`,
+                          color: on ? p.color : COLORS.muted,
+                          cursor: "pointer",
+                          fontFamily: "'Barlow Condensed',sans-serif",
+                          fontWeight: on ? 700 : 500,
+                        }}
+                      >
+                        <div style={{ fontSize: 13 }}>{p.id}</div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontFamily: "'DM Mono',monospace",
+                            marginTop: 2,
+                          }}
+                        >
+                          ${p.precio}/{p.periodo}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => goRegisterStep(2, STEP_1_FIELDS)}
+                    style={{
+                      background: COLORS.accent,
+                      color: "#000",
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "12px 24px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      fontFamily: "'Barlow Condensed',sans-serif",
+                    }}
+                  >
+                    Continuar →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {registerStep === 2 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <FInput
+                    label="Grupo sanguíneo *"
+                    placeholder="O+, A-, etc."
+                    {...regForm.register("grupoSanguineo")}
+                    error={regForm.formState.errors.grupoSanguineo?.message}
+                  />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label
+                      style={{
+                        color: COLORS.muted,
+                        fontSize: 11,
+                        letterSpacing: 1.5,
+                        textTransform: "uppercase",
+                        fontFamily: "'DM Mono',monospace",
+                      }}
+                    >
+                      ¿Alergia a medicamentos? *
+                    </label>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          flex: 1,
+                          background: COLORS.surface,
+                          border: `1px solid ${regForm.formState.errors.alergiaTiene ? COLORS.red : COLORS.border}`,
+                          borderRadius: 9,
+                          padding: "10px 14px",
+                          color: COLORS.text,
+                          fontSize: 13,
+                        }}
+                      >
+                        <input type="radio" value="si" {...regForm.register("alergiaTiene")} style={{ accentColor: COLORS.accent }} />
+                        Sí
+                      </label>
+                      <label
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          flex: 1,
+                          background: COLORS.surface,
+                          border: `1px solid ${regForm.formState.errors.alergiaTiene ? COLORS.red : COLORS.border}`,
+                          borderRadius: 9,
+                          padding: "10px 14px",
+                          color: COLORS.text,
+                          fontSize: 13,
+                        }}
+                      >
+                        <input type="radio" value="no" {...regForm.register("alergiaTiene")} style={{ accentColor: COLORS.accent }} />
+                        No
+                      </label>
+                    </div>
+                    {regForm.formState.errors.alergiaTiene?.message && (
+                      <span style={{ color: COLORS.red, fontSize: 11 }}>
+                        {regForm.formState.errors.alergiaTiene.message}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {regForm.watch("alergiaTiene") === "si" && (
+                  <FInput
+                    label="¿Cuál alergia? *"
+                    placeholder="Penicilina, aspirina, etc."
+                    {...regForm.register("alergiaDetalle")}
+                    error={regForm.formState.errors.alergiaDetalle?.message}
+                  />
+                )}
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                  <FInput
+                    label="Emergencia *"
+                    placeholder="Nombre completo"
+                    {...regForm.register("emergenciaNombre")}
+                    error={regForm.formState.errors.emergenciaNombre?.message}
+                  />
+                  <FInput
+                    label="Parentesco *"
+                    placeholder="Madre, hermano, etc."
+                    {...regForm.register("emergenciaParentesco")}
+                    error={regForm.formState.errors.emergenciaParentesco?.message}
+                  />
+                  <FInput
+                    label="Teléfono de emergencia *"
+                    placeholder="555-000-0000"
+                    {...regForm.register("emergenciaTelefono")}
+                    error={regForm.formState.errors.emergenciaTelefono?.message}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      color: COLORS.muted,
+                      fontSize: 11,
+                      letterSpacing: 1.5,
+                      textTransform: "uppercase",
+                      fontFamily: "'DM Mono',monospace",
+                      display: "block",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Historial médico
+                  </label>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+                      gap: 8,
+                    }}
+                  >
+                    {CHECKS_SALUD.map(([name, label]) => (
+                      <label
+                        key={name}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          background: COLORS.surface,
+                          border: `1px solid ${COLORS.border}`,
+                          borderRadius: 10,
+                          padding: "10px 12px",
+                          color: COLORS.text,
+                          fontSize: 13,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          {...regForm.register(name)}
+                          style={{ accentColor: COLORS.accent }}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label
+                      style={{
+                        color: COLORS.muted,
+                        fontSize: 11,
+                        letterSpacing: 1.5,
+                        textTransform: "uppercase",
+                        fontFamily: "'DM Mono',monospace",
+                      }}
+                    >
+                      Factores de riesgo *
+                    </label>
+                    <textarea
+                      rows={4}
+                      placeholder="Colesterol alto, diabetes, sedentarismo... o 'Ninguno'"
+                      {...regForm.register("factoresRiesgo")}
+                      style={{
+                        background: COLORS.surface,
+                        border: `1px solid ${regForm.formState.errors.factoresRiesgo ? COLORS.red : COLORS.border}`,
+                        borderRadius: 9,
+                        padding: "10px 14px",
+                        color: COLORS.text,
+                        fontSize: 13,
+                        outline: "none",
+                        resize: "vertical",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                    {regForm.formState.errors.factoresRiesgo?.message && (
+                      <span style={{ color: COLORS.red, fontSize: 11 }}>
+                        {regForm.formState.errors.factoresRiesgo.message}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label
+                      style={{
+                        color: COLORS.muted,
+                        fontSize: 11,
+                        letterSpacing: 1.5,
+                        textTransform: "uppercase",
+                        fontFamily: "'DM Mono',monospace",
+                      }}
+                    >
+                      Medicamento actual *
+                    </label>
+                    <textarea
+                      rows={4}
+                      placeholder="Cuál y dosis, o 'Ninguno'"
+                      {...regForm.register("medicamentoActual")}
+                      style={{
+                        background: COLORS.surface,
+                        border: `1px solid ${regForm.formState.errors.medicamentoActual ? COLORS.red : COLORS.border}`,
+                        borderRadius: 9,
+                        padding: "10px 14px",
+                        color: COLORS.text,
+                        fontSize: 13,
+                        outline: "none",
+                        resize: "vertical",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                    {regForm.formState.errors.medicamentoActual?.message && (
+                      <span style={{ color: COLORS.red, fontSize: 11 }}>
+                        {regForm.formState.errors.medicamentoActual.message}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <label
+                      style={{
+                        color: COLORS.muted,
+                        fontSize: 11,
+                        letterSpacing: 1.5,
+                        textTransform: "uppercase",
+                        fontFamily: "'DM Mono',monospace",
+                      }}
+                    >
+                      Otro padecimiento
+                    </label>
+                    <textarea
+                      rows={4}
+                      placeholder="Obligatorio si marcaste alguna condición arriba"
+                      {...regForm.register("otroPadecimiento")}
+                      style={{
+                        background: COLORS.surface,
+                        border: `1px solid ${regForm.formState.errors.otroPadecimiento ? COLORS.red : COLORS.border}`,
+                        borderRadius: 9,
+                        padding: "10px 14px",
+                        color: COLORS.text,
+                        fontSize: 13,
+                        outline: "none",
+                        resize: "vertical",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                    {regForm.formState.errors.otroPadecimiento?.message && (
+                      <span style={{ color: COLORS.red, fontSize: 11 }}>
+                        {regForm.formState.errors.otroPadecimiento.message}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => setRegisterStep(1)}
+                    style={{
+                      background: COLORS.border,
+                      color: COLORS.muted,
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "12px 22px",
+                      cursor: "pointer",
+                      fontFamily: "'Barlow Condensed',sans-serif",
+                      fontWeight: 700,
+                    }}
+                  >
+                    ← Atrás
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goRegisterStep(3, STEP_2_FIELDS)}
+                    style={{
+                      background: COLORS.accent,
+                      color: "#000",
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "12px 24px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      fontFamily: "'Barlow Condensed',sans-serif",
+                    }}
+                  >
+                    Revisar →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {registerStep === 3 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <FInput
+                    label="Actividad física habitual"
+                    placeholder="Obligatorio si practicas actividad física"
+                    {...regForm.register("actividadTipo")}
+                    error={regForm.formState.errors.actividadTipo?.message}
+                  />
+                  <FInput
+                    label="Última vez en programa *"
+                    placeholder="Hace 3 meses, nunca, etc."
+                    {...regForm.register("ultimaVezPrograma")}
+                    error={regForm.formState.errors.ultimaVezPrograma?.message}
+                  />
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                      color: COLORS.muted,
+                      fontSize: 11,
+                      letterSpacing: 1.5,
+                      textTransform: "uppercase",
+                      fontFamily: "'DM Mono',monospace",
+                    }}
+                  >
+                    ¿Practicas actividad física?
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        background: COLORS.surface,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: 9,
+                        padding: "11px 14px",
+                        color: COLORS.text,
+                        textTransform: "none",
+                        fontSize: 13,
+                        letterSpacing: 0,
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        {...regForm.register("actividadHabitual")}
+                        style={{ accentColor: COLORS.accent }}
+                      />
+                      Sí, hago ejercicio
+                    </span>
+                  </label>
+
+                  <FInput
+                    label="Frecuencia semanal"
+                    placeholder="Obligatorio si practicas actividad física"
+                    type="number"
+                    inputMode="numeric"
+                    {...regForm.register("frecuenciaSemanal")}
+                    error={regForm.formState.errors.frecuenciaSemanal?.message}
+                  />
+                  <FInput
+                    label="Tiempo por sesión"
+                    placeholder="Obligatorio si practicas actividad física"
+                    {...regForm.register("tiempoSesion")}
+                    error={regForm.formState.errors.tiempoSesion?.message}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      color: COLORS.muted,
+                      fontSize: 11,
+                      letterSpacing: 1.5,
+                      textTransform: "uppercase",
+                      fontFamily: "'DM Mono',monospace",
+                      display: "block",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Beneficios esperados * (elige al menos uno)
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
+                    {BENEFICIOS.map((b) => (
+                      <label
+                        key={b}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          background: COLORS.surface,
+                          border: `1px solid ${regForm.formState.errors.beneficios ? COLORS.red : COLORS.border}`,
+                          borderRadius: 10,
+                          padding: "10px 12px",
+                          color: COLORS.text,
+                          fontSize: 13,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          value={b}
+                          {...regForm.register("beneficios")}
+                          style={{ accentColor: COLORS.accent }}
+                        />
+                        {b}
+                      </label>
+                    ))}
+                  </div>
+                  {regForm.formState.errors.beneficios?.message && (
+                    <span style={{ color: COLORS.red, fontSize: 11 }}>
+                      {regForm.formState.errors.beneficios.message}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <FInput
+                    label="Contraseña"
+                    placeholder="Mín. 8, A-a-9"
+                    type="password"
+                    {...regForm.register("password")}
+                    error={regForm.formState.errors.password?.message}
+                  />
+                  <FInput
+                    label="Confirmar contraseña"
+                    placeholder="Repite"
+                    type="password"
+                    {...regForm.register("confirm")}
+                    error={regForm.formState.errors.confirm?.message}
+                  />
+                </div>
+
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 10,
+                    background: COLORS.surface,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    color: COLORS.text,
+                    fontSize: 13,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    {...regForm.register("aceptoPrivacidad")}
+                    style={{ accentColor: COLORS.accent, marginTop: 2 }}
+                  />
+                  <span>
+                    Confirmo que leí y acepto el{" "}
+                    <Link
+                      to="/aviso-de-privacidad"
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        color: COLORS.accent,
+                        fontWeight: 700,
+                        textDecoration: "underline",
+                        textDecorationColor: `${COLORS.accent}66`,
+                        textUnderlineOffset: 3,
+                      }}
+                    >
+                      aviso de privacidad
+                    </Link>
+                    .
+                  </span>
+                </label>
+                {regForm.formState.errors.aceptoPrivacidad?.message && (
+                  <div style={{ color: COLORS.red, fontSize: 12 }}>
+                    {regForm.formState.errors.aceptoPrivacidad.message}
+                  </div>
+                )}
+
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    background: COLORS.surface,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    color: COLORS.text,
+                    fontSize: 13,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    {...regForm.register("aceptoResponsiva")}
+                    style={{ accentColor: COLORS.accent }}
+                  />
+                  Entiendo y acepto que la actividad física tiene riesgos y confirmo que la información médica proporcionada es correcta.
+                </label>
+                {regForm.formState.errors.aceptoResponsiva?.message && (
+                  <div style={{ color: COLORS.red, fontSize: 12 }}>
+                    {regForm.formState.errors.aceptoResponsiva.message}
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    background: COLORS.surface,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: 12,
+                    padding: 16,
+                    display: "grid",
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ color: COLORS.muted, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'DM Mono',monospace" }}>
+                    Resumen
+                  </div>
+                  <div style={{ color: COLORS.text, fontWeight: 700, fontFamily: "'Barlow Condensed',sans-serif", fontSize: 18 }}>
+                    {regForm.getValues("nombre")} {regForm.getValues("apellido")}
+                  </div>
+                  <div style={{ color: COLORS.muted, fontSize: 13 }}>
+                    Plan {planSel} · {regForm.getValues("email")}
+                  </div>
+                  <div style={{ color: COLORS.muted, fontSize: 13 }}>
+                    Contacto de emergencia: {regForm.getValues("emergenciaNombre") || "—"}
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 4 }}>
+                  <button
+                    type="button"
+                    onClick={() => setRegisterStep(2)}
+                    style={{
+                      background: COLORS.border,
+                      color: COLORS.muted,
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "12px 22px",
+                      cursor: "pointer",
+                      fontFamily: "'Barlow Condensed',sans-serif",
+                      fontWeight: 700,
+                    }}
+                  >
+                    ← Atrás
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={regForm.formState.isSubmitting}
+                    style={{
+                      background: COLORS.green,
+                      color: "#000",
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "12px 24px",
+                      fontWeight: 800,
+                      cursor: regForm.formState.isSubmitting ? "not-allowed" : "pointer",
+                      opacity: regForm.formState.isSubmitting ? 0.6 : 1,
+                      fontFamily: "'Barlow Condensed',sans-serif",
+                    }}
+                  >
+                    {regForm.formState.isSubmitting ? "Creando cuenta…" : "✓ Crear cuenta y entrar"}
+                  </button>
+                </div>
+
+                <div style={{ marginTop: 4, fontSize: 11, color: COLORS.muted, lineHeight: 1.6 }}>
+                  Tu membresía queda como <strong>Por vencer</strong> hasta tu primer pago en recepción.
+                  <div style={{ marginTop: 8 }}>
+                    <Link
+                      to="/aviso-de-privacidad"
+                      style={{
+                        color: COLORS.accent,
+                        fontWeight: 600,
+                        textDecoration: "underline",
+                        textDecorationColor: `${COLORS.accent}66`,
+                        textUnderlineOffset: 3,
+                      }}
+                    >
+                      Ver aviso de privacidad
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
           </form>
         )}
       </div>

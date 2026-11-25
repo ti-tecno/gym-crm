@@ -47,6 +47,25 @@ export async function updatePackages(req, res, next) {
   }
 }
 
+export async function updatePromotions(req, res, next) {
+  try {
+    const input = Array.isArray(req.body?.promotions) ? req.body.promotions : [];
+    const promotions = input.map((promo, idx) => ({
+      id: String(promo?.id || '').trim() || `promo-${idx + 1}`,
+      nombre: String(promo?.nombre || '').trim() || `Promo ${idx + 1}`,
+      descripcion: String(promo?.descripcion || '').trim(),
+      precio: Number.isFinite(Number(promo?.precio)) ? Number(promo.precio) : 0,
+      periodo: String(promo?.periodo || '').trim() || 'mes',
+      badge: String(promo?.badge || '').trim(),
+      color: String(promo?.color || '').trim() || '#4A90D9',
+    }));
+    const data = await repo.saveSettings({ promotions });
+    res.json({ promotions: data.promotions });
+  } catch (e) {
+    next(e);
+  }
+}
+
 export async function updateSchedule(req, res, next) {
   try {
     const schedule = req.body?.schedule || { days: [], classColors: {}, slots: [] };
