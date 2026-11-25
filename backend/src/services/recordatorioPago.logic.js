@@ -247,6 +247,11 @@ export function interpretarRespuesta(status, body) {
     const estado = estadoLocal(message?.status) || ESTADO.ENVIADO;
     return { ...base, resultado: 'duplicado', estado, motivo: estado === ESTADO.FALLIDO ? (motivoDeMensaje(message) || 'El envío anterior falló') : null };
   }
+  if (status === 403 && code === 'CLIENT_DISABLED') {
+    // SofIA apaga la app en el mensajero mientras el servicio no esté pagado: afecta a todos los
+    // envíos (se detiene la corrida) y no es culpa del destinatario (se puede reintentar luego).
+    return { ...base, resultado: 'servicio_inactivo', estado: ESTADO.FALLIDO, reintentable: true, detener: true, motivo: 'Servicio de mensajería no activado por SofIA; se reintentará cuando lo activen' };
+  }
   if (status === 403 && code === 'RECIPIENT_NOT_ALLOWED') {
     return { ...base, resultado: 'no_permitido', estado: ESTADO.FALLIDO, motivo: 'Mensajero en modo prueba (sandbox): este teléfono no está en la lista permitida' };
   }

@@ -13,6 +13,7 @@ import recordatoriosRoutes from './recordatorios.routes.js';
 import settingsRoutes from './settings.routes.js';
 import uploadRoutes from './upload.routes.js';
 import clienteRoutes from './cliente.routes.js';
+import publicoRoutes from './publico.routes.js';
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use('/recordatorios', recordatoriosRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/cliente', clienteRoutes);     // portal de auto-servicio para CLIENTE
+router.use('/publico', publicoRoutes);     // liga pública de pago (sin sesión, token firmado)
 
 export default router;

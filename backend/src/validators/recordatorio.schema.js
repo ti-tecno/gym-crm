@@ -11,3 +11,6 @@ export const recordatorioCreateSchema = z.object({
 export const recordatorioUpdateSchema = recordatorioCreateSchema.partial();
 
 export const recordatorioPagoParams = z.object({ clienteId: z.string().uuid() });
+
+// data.id del mensajero (uuid) de la respuesta del cliente.
+export const respuestaParams = z.object({ clienteId: z.string().uuid(), respuestaId: z.string().min(1).max(100).regex(/^[\w-]+$/) });

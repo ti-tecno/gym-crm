@@ -12,6 +12,7 @@ import {
   etapaDeHoy, etapaManual, evaluarCliente, hoyMx, idempotencyKey, motivoDeMensaje, nombreEtapa,
   normalizarFecha, pagoDelPeriodo, parametrosPlantilla, tieneTelefono, tipoPlantilla,
 } from './recordatorioPago.logic.js';
+import { crearTokenLiga, expiracionLiga } from './ligaPago.logic.js';
 
 /** Error de negocio con status HTTP sugerido (el controlador lo convierte en HttpError). */
 export class ErrorRecordatorio extends Error {
@@ -60,6 +61,12 @@ export function crearServicioRecordatorioPago({ config, mensajero, repo, cliente
       return { resultado: 'omitido', estado: existente.estado, motivo: existente.motivoFalla, recordatorio: existente };
     }
 
+    // Botón "Pagar ahora" → https://iron-core.mx/pagar/<token>. Sin liga válida no se envía.
+    const token = crearTokenLiga(cliente.clienteId, expiracionLiga(plan.vencimiento, hoyMx(now())), config.ligaPagoSecret);
+    if (!token) {
+      return { resultado: 'omitido', estado: existente?.estado, motivo: 'No se pudo generar la liga de pago (falta LIGA_PAGO_SECRET o el cliente tiene un id no válido)', recordatorio: existente };
+    }
+
     const plantilla = config.plantillas[tipoPlantilla(plan.dias)];
     const reservado = await repo.iniciarEnvioPago(id, {
       clienteId: cliente.clienteId,
@@ -83,7 +90,7 @@ export function crearServicioRecordatorioPago({ config, mensajero, repo, cliente
       ...(config.canal ? { channel: config.canal } : {}),
       template: plantilla,
       language: config.idioma,
-      parameters: parametrosPlantilla(cliente, plan.vencimiento),
+      parameters: { ...parametrosPlantilla(cliente, plan.vencimiento), buttonUrlSuffix: token },
       ref: `cliente:${cliente.clienteId}`,
       metadata: {
         refLabel: nombreCompleto(cliente),
@@ -177,9 +184,12 @@ export function crearServicioRecordatorioPago({ config, mensajero, repo, cliente
     if (r.resultado === 'ya_enviado') {
       throw new ErrorRecordatorio(409, 'YA_ENVIADO', 'Ya se le envió este recordatorio hoy', { recordatorio: r.recordatorio });
     }
+    if (r.resultado === 'omitido') {
+      throw new ErrorRecordatorio(422, 'SIN_LIGA', r.motivo || 'No se pudo generar la liga de pago');
+    }
     if (r.estado === ESTADO.FALLIDO) {
-      const status = r.resultado === 'limite_diario' ? 429 : 422;
-      const code = r.resultado === 'limite_diario' ? 'LIMITE_DIARIO' : 'ENVIO_FALLIDO';
+      const status = r.resultado === 'limite_diario' ? 429 : r.resultado === 'servicio_inactivo' ? 503 : 422;
+      const code = r.resultado === 'limite_diario' ? 'LIMITE_DIARIO' : r.resultado === 'servicio_inactivo' ? 'SERVICIO_INACTIVO' : 'ENVIO_FALLIDO';
       throw new ErrorRecordatorio(status, code, r.motivo || 'No se pudo enviar el mensaje', { recordatorio: r.recordatorio });
     }
     return { ok: true, resultado: r.resultado, estado: r.estado, recordatorio: r.recordatorio };

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseMensajeroConfig } from './mensajero.js';
+import { parseMercadoPagoConfig } from './mercadoPago.js';
 
 // Resolve .env relative to this file (backend/.env), not process.cwd() —
 // pm2/systemd may launch with a different working directory.
@@ -84,5 +85,11 @@ env.IS_PROD = env.NODE_ENV === 'production';
 //   RECORDATORIO_PAGO_ETAPAS, RECORDATORIO_PAGO_HORA
 // Son solo de conexión: el interruptor de envío está en gym_settings (Backoffice → Mensajería).
 env.MENSAJERO = parseMensajeroConfig(process.env);
+
+// Pago en línea con Mercado Pago (Checkout Pro). Todas opcionales, mismo criterio: si faltan,
+// el pago en línea queda apagado con aviso. Ver config/mercadoPago.js y docs/PAGO_EN_LINEA.md:
+//   MERCADOPAGO_ACCESS_TOKEN, MERCADOPAGO_WEBHOOK_SECRET, PUBLIC_API_URL, PUBLIC_FRONTEND_URL,
+//   MERCADOPAGO_STATEMENT_DESCRIPTOR
+env.MERCADOPAGO = parseMercadoPagoConfig(process.env, { apiPrefix: env.API_PREFIX });
 
 export default env;

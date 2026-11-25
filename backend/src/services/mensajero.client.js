@@ -37,7 +37,37 @@ export function crearClienteMensajero({ url, apiKey, fetchImpl = globalThis.fetc
     return { ...interpretarRespuesta(response.status, body), httpStatus: response.status };
   }
 
-  return { enviarPlantilla };
+  /**
+   * GET /v1/me: estado de la app de IronCore en el mensajero (interruptor de SofIA, `active`).
+   * Nunca lanza. estado: 'activa' | 'inactiva' (403 CLIENT_DISABLED) | 'llave_invalida' | 'sin_conexion'
+   */
+  async function consultarApp({ timeoutMs: t = 4_000 } = {}) {
+    let response;
+    try {
+      response = await fetchImpl(`${url}/v1/me`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${apiKey}`, 'User-Agent': 'ironcore-api' },
+        signal: AbortSignal.timeout(t),
+      });
+    } catch (err) {
+      return { estado: 'sin_conexion', motivo: err?.name === 'TimeoutError' ? 'El mensajero no respondió a tiempo' : 'No se pudo contactar al mensajero' };
+    }
+    const body = await response.json().catch(() => ({}));
+    if (response.ok) {
+      return {
+        estado: 'activa',
+        sandbox: body?.sandbox === true,
+        canales: Array.isArray(body?.channels) ? body.channels.map((c) => ({ slug: c?.slug ?? null, displayPhone: c?.displayPhone ?? null, isDefault: c?.isDefault === true })) : [],
+      };
+    }
+    if (response.status === 403 && body?.error?.code === 'CLIENT_DISABLED') {
+      return { estado: 'inactiva', motivo: 'Servicio de mensajería no activado por SofIA' };
+    }
+    if (response.status === 401) return { estado: 'llave_invalida', motivo: 'La llave MENSAJERO_API_KEY no es válida' };
+    return { estado: 'sin_conexion', motivo: `El mensajero respondió ${response.status}` };
+  }
+
+  return { enviarPlantilla, consultarApp };
 }
 
 /**

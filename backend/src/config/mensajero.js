@@ -12,6 +12,7 @@
  */
 
 const ETAPAS_DEFECTO = [-3, 0, 3];
+const SECRETO_LIGA_MINIMO = 32; // igual que SECRETO_MINIMO de services/ligaPago.logic.js
 const HORA_DEFECTO = '09:00';
 
 const limpio = (v) => (typeof v === 'string' ? v.trim() : '');
@@ -83,14 +84,31 @@ export function parseMensajeroConfig(raw = {}) {
   if (etapas.some((e) => e < 0) && !plantillas.antes) faltantes.push('RECORDATORIO_PAGO_PLANTILLA_ANTES');
   if (etapas.includes(0) && !plantillas.hoy) faltantes.push('RECORDATORIO_PAGO_PLANTILLA_HOY');
   if (etapas.some((e) => e > 0) && !plantillas.despues) faltantes.push('RECORDATORIO_PAGO_PLANTILLA_DESPUES');
+  // Las plantillas llevan un botón "Pagar ahora" con la liga firmada del cliente: sin secreto
+  // no se envía nada (nunca un botón roto).
+  let ligaPagoSecret = limpio(raw.LIGA_PAGO_SECRET);
+  if (ligaPagoSecret && ligaPagoSecret.length < SECRETO_LIGA_MINIMO) {
+    avisos.push(`LIGA_PAGO_SECRET debe tener al menos ${SECRETO_LIGA_MINIMO} caracteres; se ignora`);
+    ligaPagoSecret = '';
+  }
+  if (!ligaPagoSecret) faltantes.push('LIGA_PAGO_SECRET');
 
   const envioDisponible = faltantes.length === 0;
   if (!envioDisponible) avisos.push(`Conexión con el mensajero sin configurar: faltan ${faltantes.join(', ')}`);
   if (!webhookSecret) avisos.push('MENSAJERO_WEBHOOK_SECRET no configurado: el webhook de estados responderá 503');
 
+  // Mensaje "pago recibido" tras un pago exitoso: solo necesita la conexión y su plantilla.
+  const plantillaPagoRecibido = limpio(raw.PAGO_RECIBIDO_PLANTILLA) || 'ironcore_pago_recibido';
+  const conexionDisponible = Boolean(url && apiKey);
+
   return {
     url, apiKey, webhookSecret, canal, idioma, plantillas, etapas, hora,
+    ligaPagoSecret,
+    ligaDisponible: Boolean(ligaPagoSecret),
     envioDisponible,
+    conexionDisponible,
+    plantillaPagoRecibido,
+    pagoRecibidoDisponible: conexionDisponible,
     webhookDisponible: Boolean(webhookSecret),
     avisos,
   };

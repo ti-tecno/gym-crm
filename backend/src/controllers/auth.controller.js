@@ -216,7 +216,8 @@ export async function refresh(req, res, next) {
     const user = await getUserById(payload.sub);
     if (!user) return next(new HttpError(401, 'NO_USER', 'Usuario inexistente'));
 
-    const accessToken = signAccessToken({ sub: user.userId, email: user.email, rol: user.rol });
+    // Mismo payload que issueSession: sin `cid` el portal del CLIENTE responde 403 tras recargar.
+    const accessToken = signAccessToken({ sub: user.userId, email: user.email, rol: user.rol, cid: user.clienteId });
     const { token: newRefresh, jti: newJti } = signRefreshToken({ sub: user.userId });
     await saveRefresh({ jti: newJti, userId: user.userId, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 });
 

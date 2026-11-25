@@ -123,7 +123,7 @@ test('configuración: opcional, nunca lanza, avisa lo que falta', () => {
   const completa = parseMensajeroConfig({
     MENSAJERO_URL: 'https://msg.example.test/v1/', MENSAJERO_API_KEY: 'msk_x', MENSAJERO_WEBHOOK_SECRET: 's',
     RECORDATORIO_PAGO_PLANTILLA_ANTES: 'a', RECORDATORIO_PAGO_PLANTILLA_HOY: 'h', RECORDATORIO_PAGO_PLANTILLA_DESPUES: 'd',
-    RECORDATORIO_PAGO_HORA: '10:30', RECORDATORIO_PAGO_ETAPAS: '5, -5 ,0',
+    RECORDATORIO_PAGO_HORA: '10:30', RECORDATORIO_PAGO_ETAPAS: '5, -5 ,0', LIGA_PAGO_SECRET: 'x'.repeat(32),
   });
   assert.equal(completa.url, 'https://msg.example.test');
   assert.equal(completa.envioDisponible, true);
@@ -137,7 +137,12 @@ test('configuración: opcional, nunca lanza, avisa lo que falta', () => {
   assert.equal(mala.avisos.length >= 3, true);
 
   // Solo se exigen plantillas de las etapas configuradas
-  const soloAntes = parseMensajeroConfig({ MENSAJERO_URL: 'http://x.test', MENSAJERO_API_KEY: 'k', RECORDATORIO_PAGO_ETAPAS: '-3', RECORDATORIO_PAGO_PLANTILLA_ANTES: 'a' });
+  const soloAntes = parseMensajeroConfig({ MENSAJERO_URL: 'http://x.test', MENSAJERO_API_KEY: 'k', RECORDATORIO_PAGO_ETAPAS: '-3', RECORDATORIO_PAGO_PLANTILLA_ANTES: 'a', LIGA_PAGO_SECRET: 'x'.repeat(32) });
+  // Sin secreto de ligas no se envía (las plantillas llevan botón con la liga)
+  const sinLiga = parseMensajeroConfig({ MENSAJERO_URL: 'http://x.test', MENSAJERO_API_KEY: 'k', RECORDATORIO_PAGO_ETAPAS: '-3', RECORDATORIO_PAGO_PLANTILLA_ANTES: 'a' });
+  assert.equal(sinLiga.envioDisponible, false);
+  assert.ok(sinLiga.avisos.some((a) => a.includes('LIGA_PAGO_SECRET')));
+  assert.equal(parseMensajeroConfig({ LIGA_PAGO_SECRET: 'corto' }).ligaDisponible, false);
   assert.equal(soloAntes.envioDisponible, true);
   assert.equal(parseEtapas('-3,0,3,100'), null);
   assert.equal(parseHora('9:7'), null);

@@ -5,6 +5,8 @@ import { fechaQuery, medidaCreateSchema, workoutCreateSchema } from '../validato
 import { perfilUpdateSchema } from '../validators/perfil.schema.js';
 import { asignarRutinaSchema } from '../validators/rutina.schema.js';
 import * as ctrl from '../controllers/cliente.controller.js';
+import * as pagosCtrl from '../controllers/pagos.controller.js';
+import { miPagoParams } from '../validators/pago.schema.js';
 
 const router = Router();
 
@@ -27,5 +29,10 @@ router.get('/medidas',    ctrl.listMedidas);
 router.post('/medidas',   requireCsrf, validate({ body: medidaCreateSchema }), ctrl.createMedida);
 
 router.get('/prs',        ctrl.listPRs);
+
+// Pago de membresía en línea (Mercado Pago). Monto y concepto salen del cliente del JWT.
+router.get('/pagos',              pagosCtrl.misPagos);
+router.post('/pagos/checkout',    requireCsrf, pagosCtrl.checkout);
+router.get('/pagos/:pagoId',      validate({ params: miPagoParams }), pagosCtrl.miPago);
 
 export default router;

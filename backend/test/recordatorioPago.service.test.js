@@ -3,10 +3,14 @@ import assert from 'node:assert/strict';
 import { crearServicioRecordatorioPago, ErrorRecordatorio } from '../src/services/recordatorioPago.service.js';
 import { parseMensajeroConfig } from '../src/config/mensajero.js';
 import { interpretarRespuesta } from '../src/services/recordatorioPago.logic.js';
+import { verificarTokenLiga } from '../src/services/ligaPago.logic.js';
+
+const SECRETO_LIGA = 'secreto-de-prueba-de-ligas-de-pago-0123';
 
 const config = parseMensajeroConfig({
   MENSAJERO_URL: 'https://msg.test', MENSAJERO_API_KEY: 'k', MENSAJERO_WEBHOOK_SECRET: 's', MENSAJERO_CANAL: 'ironcore',
   RECORDATORIO_PAGO_PLANTILLA_ANTES: 'pago_proximo', RECORDATORIO_PAGO_PLANTILLA_HOY: 'pago_hoy', RECORDATORIO_PAGO_PLANTILLA_DESPUES: 'pago_vencido',
+  LIGA_PAGO_SECRET: SECRETO_LIGA,
 });
 
 const id = (n) => `00000000-0000-4000-8000-00000000000${n}`;
@@ -105,6 +109,11 @@ test('encendido: envía a quien le toca hoy, con llave, ref, metadata y plantill
   assert.equal(ana.metadata.refLabel, 'Ana López');
   assert.equal(ana.metadata.recordatorioId, ana.idempotencyKey);
   assert.deepEqual(Object.keys(ana.parameters.body).sort(), ['fecha', 'monto', 'nombre']);
+  // Botón "Pagar ahora": la liga firmada de ESE cliente, vigente durante la secuencia de recordatorios
+  assert.match(ana.parameters.buttonUrlSuffix, /^[A-Za-z0-9_-]{47}$/);
+  assert.equal(verificarTokenLiga(ana.parameters.buttonUrlSuffix, SECRETO_LIGA, '2026-11-24'), id(1));
+  assert.equal(verificarTokenLiga(ana.parameters.buttonUrlSuffix, SECRETO_LIGA, '2026-11-30'), id(1)); // sigue en d+3
+  assert.equal(verificarTokenLiga(enviados[2].parameters.buttonUrlSuffix, SECRETO_LIGA, '2026-11-24'), id(3));
   assert.equal(enviados[1].template, 'pago_hoy');
   assert.equal(enviados[2].template, 'pago_vencido');
   assert.equal(enviados[2].idempotencyKey, `pago:${id(3)}:2026-11-21:d+3`);

@@ -74,6 +74,31 @@ export async function updateCliente(id, patch) {
   return Attributes;
 }
 
+/**
+ * Respuestas de WhatsApp del cliente (lista completa) con bloqueo optimista sobre
+ * respuestasVersion. Devuelve false si otro proceso la cambió entre la lectura y la escritura.
+ */
+export async function guardarRespuestasWhatsapp(id, lista, versionPrevia) {
+  const values = { ':l': lista, ':uno': 1, ':cero': 0, ':now': new Date().toISOString() };
+  let cond = 'attribute_exists(clienteId) AND ';
+  if (versionPrevia == null) cond += 'attribute_not_exists(#v)';
+  else { values[':vp'] = versionPrevia; cond += '#v = :vp'; }
+  try {
+    await ddb.send(new UpdateCommand({
+      TableName: TABLES.CLIENTES,
+      Key: { clienteId: id },
+      UpdateExpression: 'SET #r = :l, #v = if_not_exists(#v, :cero) + :uno, updatedAt = :now',
+      ConditionExpression: cond,
+      ExpressionAttributeNames: { '#r': 'respuestasWhatsapp', '#v': 'respuestasVersion' },
+      ExpressionAttributeValues: values,
+    }));
+    return true;
+  } catch (err) {
+    if (err?.name === 'ConditionalCheckFailedException') return false;
+    throw err;
+  }
+}
+
 export async function deleteCliente(id) {
   await ddb.send(new DeleteCommand({
     TableName: TABLES.CLIENTES, Key: { clienteId: id },
