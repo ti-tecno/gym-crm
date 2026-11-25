@@ -25,6 +25,7 @@ export const NAV_ITEMS = [
   { id: 'rutinas',    to: '/rutinas/clientes',    icon: '◷', label: 'Rutinas Clientes' },
   { id: 'coach',      to: '/rutinas/coach',       icon: '◐', label: 'Rutinas Coach' },
   { id: 'contenido',  to: '/admin/contenido',     icon: '⚙', label: 'Backoffice Contenido', adminOnly: true },
+  { id: 'manual',     to: '/admin/manual',        icon: '◌', label: 'Manual', adminOnly: true },
 ];
 
 export const ROLES = { ADMIN: 'ADMIN', COACH: 'COACH', RECEP: 'RECEP', CLIENTE: 'CLIENTE' };
@@ -40,4 +41,5 @@ export const CLIENTE_NAV_ITEMS = [
   { id: 'mis-medidas',   to: '/mi/medidas',    icon: '◐', label: 'Medidas' },
   { id: 'mi-progreso',   to: '/mi/progreso',   icon: '◎', label: 'Progreso' },
   { id: 'mi-perfil',     to: '/mi/completar-perfil', icon: '☺', label: 'Mi Perfil' },
+  { id: 'mi-ayuda',      to: '/mi/ayuda',       icon: '◌', label: 'Ayuda' },
 ];

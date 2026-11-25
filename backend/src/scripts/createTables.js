@@ -22,15 +22,12 @@ const tableDefs = [
       IndexName: 'email-index',
       KeySchema: [{ AttributeName: 'email', KeyType: 'HASH' }],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.REFRESH_TOKENS,
     KeySchema: [{ AttributeName: 'jti', KeyType: 'HASH' }],
     AttributeDefinitions: [{ AttributeName: 'jti', AttributeType: 'S' }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     _ttl: 'expiresAt',
   },
   {
@@ -44,9 +41,7 @@ const tableDefs = [
       IndexName: 'email-index',
       KeySchema: [{ AttributeName: 'email', KeyType: 'HASH' }],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.PLANES,
@@ -59,9 +54,7 @@ const tableDefs = [
       IndexName: 'nombre-index',
       KeySchema: [{ AttributeName: 'nombre', KeyType: 'HASH' }],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.INSCRIPCIONES,
@@ -78,9 +71,7 @@ const tableDefs = [
         { AttributeName: 'fechaRegistro', KeyType: 'RANGE' },
       ],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.MEMBRESIAS,
@@ -100,7 +91,6 @@ const tableDefs = [
           { AttributeName: 'fechaInicio', KeyType: 'RANGE' },
         ],
         Projection: { ProjectionType: 'ALL' },
-        ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
       },
       {
         IndexName: 'estado-fechaFin-index',
@@ -109,10 +99,8 @@ const tableDefs = [
           { AttributeName: 'fechaFin', KeyType: 'RANGE' },
         ],
         Projection: { ProjectionType: 'ALL' },
-        ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
       },
     ],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.PAGOS,
@@ -129,9 +117,7 @@ const tableDefs = [
         { AttributeName: 'fecha', KeyType: 'RANGE' },
       ],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.PRODUCTOS,
@@ -144,9 +130,7 @@ const tableDefs = [
       IndexName: 'codigo-index',
       KeySchema: [{ AttributeName: 'codigo', KeyType: 'HASH' }],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.VENTA_PEDIDOS,
@@ -161,7 +145,6 @@ const tableDefs = [
         IndexName: 'fecha-index',
         KeySchema: [{ AttributeName: 'fecha', KeyType: 'HASH' }],
         Projection: { ProjectionType: 'ALL' },
-        ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
       },
       {
         IndexName: 'clienteId-fecha-index',
@@ -170,10 +153,8 @@ const tableDefs = [
           { AttributeName: 'fecha', KeyType: 'RANGE' },
         ],
         Projection: { ProjectionType: 'ALL' },
-        ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
       },
     ],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.VENTA_DETALLES,
@@ -188,16 +169,13 @@ const tableDefs = [
         IndexName: 'ventaId-index',
         KeySchema: [{ AttributeName: 'ventaId', KeyType: 'HASH' }],
         Projection: { ProjectionType: 'ALL' },
-        ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
       },
       {
         IndexName: 'productoId-index',
         KeySchema: [{ AttributeName: 'productoId', KeyType: 'HASH' }],
         Projection: { ProjectionType: 'ALL' },
-        ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
       },
     ],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.INVENTARIO_MOVIMIENTOS,
@@ -214,9 +192,7 @@ const tableDefs = [
         { AttributeName: 'fecha', KeyType: 'RANGE' },
       ],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.GASTOS,
@@ -229,9 +205,7 @@ const tableDefs = [
       IndexName: 'fecha-index',
       KeySchema: [{ AttributeName: 'fecha', KeyType: 'HASH' }],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.INGRESOS,
@@ -244,9 +218,7 @@ const tableDefs = [
       IndexName: 'fecha-index',
       KeySchema: [{ AttributeName: 'fecha', KeyType: 'HASH' }],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.CREDITOS,
@@ -263,9 +235,7 @@ const tableDefs = [
         { AttributeName: 'fecha', KeyType: 'RANGE' },
       ],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.CREDITO_ABONOS,
@@ -282,45 +252,37 @@ const tableDefs = [
         { AttributeName: 'fecha', KeyType: 'RANGE' },
       ],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.INVENTARIO,
     KeySchema: [{ AttributeName: 'itemId', KeyType: 'HASH' }],
     AttributeDefinitions: [{ AttributeName: 'itemId', AttributeType: 'S' }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.NOMINA,
     KeySchema: [{ AttributeName: 'empleadoId', KeyType: 'HASH' }],
     AttributeDefinitions: [{ AttributeName: 'empleadoId', AttributeType: 'S' }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.RUTINAS_CLIENTES,
     KeySchema: [{ AttributeName: 'rutinaId', KeyType: 'HASH' }],
     AttributeDefinitions: [{ AttributeName: 'rutinaId', AttributeType: 'S' }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.RUTINAS_COACH,
     KeySchema: [{ AttributeName: 'rutinaId', KeyType: 'HASH' }],
     AttributeDefinitions: [{ AttributeName: 'rutinaId', AttributeType: 'S' }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.RECORDATORIOS,
     KeySchema: [{ AttributeName: 'recordatorioId', KeyType: 'HASH' }],
     AttributeDefinitions: [{ AttributeName: 'recordatorioId', AttributeType: 'S' }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.SETTINGS,
     KeySchema: [{ AttributeName: 'settingsId', KeyType: 'HASH' }],
     AttributeDefinitions: [{ AttributeName: 'settingsId', AttributeType: 'S' }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.WORKOUTS,
@@ -337,9 +299,7 @@ const tableDefs = [
         { AttributeName: 'fecha', KeyType: 'RANGE' },
       ],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.MEDIDAS,
@@ -356,9 +316,7 @@ const tableDefs = [
         { AttributeName: 'fecha', KeyType: 'RANGE' },
       ],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
   {
     TableName: TABLES.PRS,
@@ -375,9 +333,7 @@ const tableDefs = [
         { AttributeName: 'ejercicio', KeyType: 'RANGE' },
       ],
       Projection: { ProjectionType: 'ALL' },
-      ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
     }],
-    ProvisionedThroughput: { ReadCapacityUnits: 5, WriteCapacityUnits: 5 },
   },
 ];
 
@@ -407,7 +363,8 @@ async function createOne(def) {
     }
   }
   console.log(`  ✓ Creando ${def.TableName}`);
-  await ddbClient.send(new CreateTableCommand(input));
+  // On-demand: sin capacidad fija (el tráfico del gym cabe en centavos/mes).
+  await ddbClient.send(new CreateTableCommand({ ...input, BillingMode: 'PAY_PER_REQUEST' }));
   await waitUntilTableExists({ client: ddbClient, maxWaitTime: 60 }, { TableName: def.TableName });
   if (_ttl) {
     await ddbClient.send(new UpdateTimeToLiveCommand({

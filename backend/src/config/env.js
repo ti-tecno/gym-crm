@@ -2,8 +2,12 @@ import dotenv from 'dotenv';
 import { z } from 'zod';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-dotenv.config();
+// Resolve .env relative to this file (backend/.env), not process.cwd() —
+// pm2/systemd may launch with a different working directory.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -55,7 +59,7 @@ const env = parsed.data;
 
 // Resuelve claves (lazy — sólo si los archivos existen)
 function readKey(p) {
-  const abs = path.isAbsolute(p) ? p : path.resolve(process.cwd(), p);
+  const abs = path.isAbsolute(p) ? p : path.resolve(__dirname, '../..', p);
   if (!fs.existsSync(abs)) {
     console.warn(`[env] Clave no encontrada: ${abs}. Ejecuta: npm run keys:gen`);
     return null;

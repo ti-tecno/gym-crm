@@ -13,9 +13,10 @@ function hexToRgba(hex, alpha) {
 }
 
 const TABS = [
-  { id: "packages", icon: "💳", label: "Paquetes" },
-  { id: "coaches",  icon: "🏋️", label: "Coaches" },
-  { id: "schedule", icon: "🗓", label: "Horarios" },
+  { id: "packages",   icon: "💳", label: "Paquetes" },
+  { id: "promotions", icon: "🎉", label: "Promociones" },
+  { id: "coaches",    icon: "🏋️", label: "Coaches" },
+  { id: "schedule",   icon: "🗓", label: "Horarios" },
 ];
 
 function Card({ title, children, right }) {
@@ -53,6 +54,7 @@ export default function BackofficeContenido() {
   const [err, setErr] = useState("");
 
   const [packages, setPackages] = useState([]);
+  const [promotions, setPromotions] = useState([]);
   const [coaches, setCoaches] = useState([]);
   const [schedule, setSchedule] = useState({
     days: [],
@@ -67,6 +69,7 @@ export default function BackofficeContenido() {
       try {
         const data = await settingsService.admin();
         setPackages(Array.isArray(data.packages) ? data.packages : []);
+        setPromotions(Array.isArray(data.promotions) ? data.promotions : []);
         setCoaches(Array.isArray(data.coaches) ? data.coaches : []);
         const nextSchedule = data.schedule || {
           days: [],
@@ -146,6 +149,7 @@ export default function BackofficeContenido() {
 
         setSchedule(fallbackSchedule);
         setPackages([]);
+        setPromotions([]);
 
         if (status === 404) {
           setErr(
@@ -263,6 +267,20 @@ export default function BackofficeContenido() {
     }
   };
 
+  const savePromotions = async () => {
+    setSaving(true);
+    setErr("");
+    setMsg("");
+    try {
+      await settingsService.updatePromotions(promotions);
+      setMsg("Promociones actualizadas");
+    } catch (e) {
+      setErr(e?.response?.data?.error || "Error guardando promociones");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const saveCoaches = async () => {
     setSaving(true);
     setErr("");
@@ -299,7 +317,7 @@ export default function BackofficeContenido() {
     <div>
       <SectionHeader
         title="Backoffice de Contenido"
-        sub="Administra paquetes y horarios del landing"
+        sub="Administra paquetes, promociones y horarios del landing"
       />
       <TabBar tabs={TABS} active={tab} onChange={setTab} />
 
@@ -501,6 +519,181 @@ export default function BackofficeContenido() {
                 />
               </div>
             ))}
+          </div>
+        </Card>
+      )}
+
+      {tab === "promotions" && (
+        <Card
+          title="Promociones"
+          right={
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() =>
+                  setPromotions((prev) => [
+                    ...prev,
+                    {
+                      id: `promo-${Date.now()}`,
+                      nombre: "",
+                      descripcion: "",
+                      precio: 0,
+                      periodo: "mes",
+                      badge: "",
+                      color: COLORS.accent,
+                    },
+                  ])
+                }
+                style={{
+                  background: "transparent",
+                  color: COLORS.accent,
+                  border: `1px solid ${COLORS.accent}`,
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                }}
+              >
+                + Agregar promoción
+              </button>
+              <button
+                onClick={savePromotions}
+                disabled={saving}
+                style={{
+                  background: COLORS.accent,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  cursor: "pointer",
+                }}
+              >
+                {saving ? "Guardando…" : "Guardar promociones"}
+              </button>
+            </div>
+          }
+        >
+          <div style={{ display: "grid", gap: 12 }}>
+            {promotions.map((p, i) => (
+              <div
+                key={p.id || i}
+                style={{
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 10,
+                  padding: 12,
+                }}
+              >
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 120px 140px",
+                    gap: 8,
+                  }}
+                >
+                  <input
+                    value={p.nombre || ""}
+                    onChange={(e) =>
+                      setPromotions((prev) =>
+                        prev.map((x, idx) =>
+                          idx === i ? { ...x, nombre: e.target.value } : x,
+                        ),
+                      )
+                    }
+                    placeholder="Nombre (ej: Promo Pareja)"
+                  />
+                  <input
+                    value={p.badge || ""}
+                    onChange={(e) =>
+                      setPromotions((prev) =>
+                        prev.map((x, idx) =>
+                          idx === i ? { ...x, badge: e.target.value } : x,
+                        ),
+                      )
+                    }
+                    placeholder="Badge (ej: 2X1, PAREJA)"
+                  />
+                  <input
+                    type="number"
+                    value={p.precio ?? 0}
+                    onChange={(e) =>
+                      setPromotions((prev) =>
+                        prev.map((x, idx) =>
+                          idx === i
+                            ? { ...x, precio: Number(e.target.value || 0) }
+                            : x,
+                        ),
+                      )
+                    }
+                    placeholder="Precio"
+                  />
+                  <input
+                    value={p.periodo || ""}
+                    onChange={(e) =>
+                      setPromotions((prev) =>
+                        prev.map((x, idx) =>
+                          idx === i ? { ...x, periodo: e.target.value } : x,
+                        ),
+                      )
+                    }
+                    placeholder="Periodo (ej: mes, 3 meses)"
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr auto",
+                    gap: 8,
+                    marginTop: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  <input
+                    value={p.color || ""}
+                    onChange={(e) =>
+                      setPromotions((prev) =>
+                        prev.map((x, idx) =>
+                          idx === i ? { ...x, color: e.target.value } : x,
+                        ),
+                      )
+                    }
+                    placeholder="Color HEX (#CF1B36)"
+                  />
+                  <button
+                    onClick={() =>
+                      setPromotions((prev) => prev.filter((_, idx) => idx !== i))
+                    }
+                    style={{
+                      background: COLORS.red,
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "6px 10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+
+                <textarea
+                  value={p.descripcion || ""}
+                  onChange={(e) =>
+                    setPromotions((prev) =>
+                      prev.map((x, idx) =>
+                        idx === i ? { ...x, descripcion: e.target.value } : x,
+                      ),
+                    )
+                  }
+                  rows={2}
+                  style={{ width: "100%", marginTop: 8, resize: "vertical", fontFamily: "inherit", fontSize: 14 }}
+                  placeholder="Descripción breve de la promoción"
+                />
+              </div>
+            ))}
+            {promotions.length === 0 && (
+              <p style={{ color: COLORS.muted, textAlign: "center", padding: 24 }}>
+                Sin promociones. Agrega una con el botón de arriba.
+              </p>
+            )}
           </div>
         </Card>
       )}

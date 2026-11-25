@@ -66,6 +66,7 @@ controllers/     Request handlers; delegate to repos/services
 services/        jwt.service.js, password.service.js
 repositories/    DynamoDB queries; no ORM
 validators/      Zod schemas applied via validate() middleware
+utils/           perfil.js (isPerfilCompleto — profile-questionnaire completeness rules), dates.js
 scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js, importWorkbook.js / importMembers.js / importGastos.js / importIngresos.js / importInscripciones.js (one-off legacy data imports, see below), dedupeClientes.js
 ```
 
@@ -80,19 +81,23 @@ scripts/         createTables.js, seed.js, clearSeed.js, generateKeys.js, import
 
 **Patterns:**
 - DynamoDB queries always use `ExpressionAttributeNames` + `ExpressionAttributeValues` (no interpolation). Import `ddb` and `TABLES` from `config/dynamo.js`.
-- All endpoints have a Zod schema applied at the middleware layer via `validate(schema)`
+- Most endpoints have a Zod schema applied at the middleware layer via `validate(schema)`. Exceptions: `dashboard`, `upload`, and `settings` routes — `settings.controller.js` normalizes/coerces each field by hand instead, so new settings sections must follow that pattern (or add a validator)
+- `env.js` loads `backend/.env` and resolves relative key paths (`JWT_*_KEY_PATH`) relative to `backend/`, not `process.cwd()` (pm2/systemd may start from another directory). `server.js` serves HTTPS when `TLS_KEY_PATH`/`TLS_CERT_PATH` exist, otherwise falls back to HTTP
+- Health check (`GET /health` and `GET /api/v1/health`) is mounted in `app.js` *before* Helmet/CORS with `Access-Control-Allow-Origin: *` so external monitors are never blocked — keep it above those middlewares
 - Failed login attempts tracked; account locked after 5 failures for 15 min; bcrypt saltRounds=12
 - Google OAuth (`auth.controller.js`'s `googleLogin`): verifies the ID token server-side with `google-auth-library` against `GOOGLE_CLIENT_ID`, requires `email_verified`, then looks up the existing `gym_users` record by email — it never creates accounts, so users must register (password or manually) before "Sign in with Google" works. On first successful Google login it opportunistically sets `googleId`/`oauthProvider` on the user via `linkGoogleAccount` (`users.repo.js`); this link is best-effort and failures are only logged, not fatal. Gated by a dedicated `googleAuthLimiter` (`middleware/rateLimiter.js`) and by `googleClient` being non-null (i.e. `GOOGLE_CLIENT_ID` set) — otherwise the endpoint returns 503 `GOOGLE_AUTH_DISABLED`.
 - Logs via Winston with automatic redaction of `password`, `token`, `cc` fields
 - `HttpError(status, code, message)` is the standard way to pass errors to `next()`
 - File uploads (`upload.routes.js`/`upload.controller.js`) use `multer` disk storage, writing to `backend/public/uploads/<category>/` (currently coach images) with a mime allowlist and 5MB limit; served as static files from `backend/public/`
-- `gym_settings` backs the public landing page and admin "Contenido" backoffice (packages, coaches, schedule) via `settings.routes.js` — this is the only table read by an unauthenticated route
+- `gym_settings` backs the public landing page and admin "Contenido" backoffice via `settings.routes.js`: `GET /settings/public` (unauthenticated — the only table read by an unauthenticated route), `GET /settings/admin`, and one `PUT /settings/admin/<section>` per section (`packages`, `promotions`, `schedule`, `calendar`, `coaches`), each saved through `settings.repo.js`'s `saveSettings()`
+- Profile completeness: `auth.controller.js` returns `perfilCompleto` (from `utils/perfil.js`) on login/refresh for CLIENTE users. Accounts created by staff, before the registration questionnaire existed, or via Google login are typically incomplete until completed through `PUT /cliente/perfil`
 
 ### Frontend (`frontend/src/`)
 
 ```
 context/AuthContext.jsx    useAuth() hook; login/logout/register/hasRole/isAccessValid
 guards/ProtectedRoute.jsx  Role check + token expiry; redirects to /login if unauthorized
+guards/RequireProfileComplete.jsx  Wraps the CLIENTE tree; forces users with perfilCompleto === false to /mi/completar-perfil
 pages/                     Clientes/ (staff views), Cliente/ (member portal), LandingPage.jsx (public), BackofficeContenido.jsx (admin content editor), plus top-level pages
 components/layout/         Layout + Sidebar (staff), ClienteLayout + ClienteSidebar (member portal)
 components/ui/             Shared primitives: Avatar, Badge, FInput, SectionHeader, StatCard, TabBar
@@ -101,7 +106,7 @@ utils/                     tokenStore.js (in-memory JWT), sanitize.js (DOMPurify
 constants/theme.js         ROLES enum, STAFF_ROLES array, color palette, NAV_ITEMS, CLIENTE_NAV_ITEMS
 ```
 
-**Dual-layout routing**: `App.jsx` has two separate `<Route>` trees. Staff roles (`ADMIN`, `COACH`, `RECEP`) use `<Layout>` with `Sidebar`. `CLIENTE` uses `<ClienteLayout>` with `ClienteSidebar`. Routes under `/mi/*` are client-only; routes under `/dashboard`, `/clientes/*`, `/inventario`, `/nomina`, `/rutinas/*`, `/admin/*` are staff-only. `/` renders `LandingPage` (public marketing page, driven by `gym_settings`) when there's no session, or redirects to the correct portal when there is one. `/admin/contenido` (ADMIN only) edits the landing page's packages/coaches/schedule content.
+**Dual-layout routing**: `App.jsx` has two separate `<Route>` trees. Staff roles (`ADMIN`, `COACH`, `RECEP`) use `<Layout>` with `Sidebar`. `CLIENTE` uses `<ClienteLayout>` with `ClienteSidebar`. Routes under `/mi/*` are client-only; routes under `/dashboard`, `/clientes/*`, `/inventario`, `/nomina`, `/rutinas/*`, `/admin/*` are staff-only. `/` renders `LandingPage` (public marketing page, driven by `gym_settings`) when there's no session, or redirects to the correct portal when there is one. `/admin/contenido` (ADMIN only) edits the landing page's packages/promotions/coaches/schedule/calendar content. In-app user manuals live at `/admin/manual` (`ManualAdministrador.jsx`, ADMIN) and `/mi/ayuda` (`Cliente/ManualUsuario.jsx`) — update them when changing user-facing flows they describe.
 
 **Patterns:**
 - JWT stored in memory only via `tokenStore.js` (never localStorage); on page reload, `AuthContext` bootstraps from the httpOnly refresh cookie
@@ -172,7 +177,7 @@ No migration framework; schema changes require `db:reset`.
 
 ## Linting & Tests
 
-No linting or test framework is configured yet. `package.json` has placeholder scripts. To add:
+No linting or test framework is configured yet. `package.json` has placeholder scripts; verification is manual (see `docs/QA-TEST-PLAN.md`) plus `npm run build` in `frontend/`. To add:
 - **Linting**: `eslint` with `.eslintrc.json`
 - **Backend tests**: `vitest` + `backend/src/**/*.test.js`
 - **Frontend tests**: `vitest` + React Testing Library

@@ -22,6 +22,22 @@ const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
+// ── Health check — CORS abierto para monitoreo externo desde cualquier origen.
+// Se monta ANTES de helmet/CORS con whitelist para que nunca sea bloqueado.
+const healthPaths = ['/health', `${env.API_PREFIX}/health`];
+app.options(healthPaths, (_req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS');
+  res.set('Access-Control-Allow-Headers', '*');
+  res.set('Access-Control-Max-Age', '600');
+  res.sendStatus(204);
+});
+app.get(healthPaths, (_req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Cache-Control', 'no-store');
+  res.json({ status: 'ok', ts: Date.now() });
+});
+
 // ── Helmet (CSP estricta, HSTS, frameguard, nosniff…)
 app.use(helmet({
   contentSecurityPolicy: {
@@ -83,9 +99,6 @@ app.use('/uploads', express.static(path.resolve(__dirname, '../public/uploads'),
   maxAge: '7d',
   etag: true,
 }));
-
-// Health (info mínima)
-app.get('/health', (_req, res) => res.json({ status: 'ok', ts: Date.now() }));
 
 // Rutas
 app.use(env.API_PREFIX, routes);

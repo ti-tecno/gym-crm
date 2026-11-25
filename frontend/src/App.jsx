@@ -21,6 +21,7 @@ import Creditos from "./pages/Creditos.jsx";
 import RutinasClientes from "./pages/RutinasClientes.jsx";
 import RutinasCoach from "./pages/RutinasCoach.jsx";
 import BackofficeContenido from "./pages/BackofficeContenido.jsx";
+import ManualAdministrador from "./pages/ManualAdministrador.jsx";
 
 // Portal cliente
 import MiResumen from "./pages/Cliente/MiResumen.jsx";
@@ -30,6 +31,7 @@ import Diario from "./pages/Cliente/Diario.jsx";
 import Medidas from "./pages/Cliente/Medidas.jsx";
 import Progreso from "./pages/Cliente/Progreso.jsx";
 import CompletarPerfil from "./pages/Cliente/CompletarPerfil.jsx";
+import ManualUsuario from "./pages/Cliente/ManualUsuario.jsx";
 
 /** Muestra el landing si no hay sesión; redirige al portal según rol si ya está autenticado. */
 function HomeRedirect() {
@@ -125,6 +127,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/manual"
+          element={
+            <ProtectedRoute roles={[ROLES.ADMIN]}>
+              <ManualAdministrador />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
       {/* ── Portal CLIENTE ── */}
@@ -144,6 +154,7 @@ export default function App() {
         <Route path="/mi/medidas" element={<Medidas />} />
         <Route path="/mi/progreso" element={<Progreso />} />
         <Route path="/mi/completar-perfil" element={<CompletarPerfil />} />
+        <Route path="/mi/ayuda" element={<ManualUsuario />} />
       </Route>
 
       <Route path="/" element={<HomeRedirect />} />
