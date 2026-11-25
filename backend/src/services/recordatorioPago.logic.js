@@ -65,9 +65,14 @@ export function nombreEtapa(offset) {
   return offset > 0 ? `d+${offset}` : `d${offset}`;
 }
 
-/** Etapa de un envío manual fuera de las etapas programadas (uno por día como máximo). */
-export function etapaManual(hoy) {
-  return `manual-${hoy}`;
+/**
+ * Etapa de un envío manual: uno por día y por teléfono. Lleva los últimos 4 dígitos porque
+ * el mensajero conserva la llave cuando falla por el destinatario (número sin WhatsApp):
+ * si recepción corrige el teléfono, la llave cambia y el reintento sí sale.
+ */
+export function etapaManual(hoy, telefono = '') {
+  const ultimos = String(telefono).replace(/\D/g, '').slice(-4);
+  return ultimos ? `manual-${hoy}-${ultimos}` : `manual-${hoy}`;
 }
 
 /** Llave determinística: misma persona + mismo vencimiento + misma etapa = un solo mensaje. */
@@ -87,10 +92,16 @@ export function tieneTelefono(telefono) {
   return typeof telefono === 'string' && telefono.replace(/\D/g, '').length >= 10;
 }
 
-/** "sábado 5 de diciembre" — la fecha se interpreta como día de calendario, sin zona. */
+const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+/**
+ * "lunes 30 de noviembre" — mismo formato que el ejemplo con el que se aprobaron las
+ * plantillas en Meta. Se arma a mano (sin Intl) para no depender de comas o de la versión de ICU.
+ */
 export function fechaLegible(iso) {
   const d = new Date(aUtc(iso));
-  return new Intl.DateTimeFormat('es-MX', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }).format(d);
+  return `${DIAS_SEMANA[d.getUTCDay()]} ${d.getUTCDate()} de ${MESES[d.getUTCMonth()]}`;
 }
 
 export function montoLegible(monto) {

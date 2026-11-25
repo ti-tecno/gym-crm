@@ -154,6 +154,8 @@ test('falla definitiva: la tarea automática no insiste; la reintenta solo recep
   const manual = await servicio.enviarManual(id(1), 'recep@x');
   assert.equal(manual.ok, true);
   assert.equal(enviados.filter((e) => e.to === '55 1111 1111').length, 2);
+  // El mensajero conserva la llave fallida: el reintento manual usa otra (día + teléfono)
+  assert.equal(enviados.at(-1).idempotencyKey, `pago:${id(1)}:2026-11-27:manual-2026-11-24-1111`);
 });
 
 test('apagarlo a media corrida detiene los envíos siguientes', async () => {
@@ -183,7 +185,7 @@ test('envío manual: apagado, sin teléfono, ya enviado y fuera de etapa', async
   await assert.rejects(servicio.enviarManual(id(1), 'u'), (e) => e.code === 'YA_ENVIADO');
   const fuera = await servicio.enviarManual(id(5), 'u'); // vence mañana: no es día de etapa
   assert.equal(fuera.ok, true);
-  assert.equal(enviados.at(-1).idempotencyKey, `pago:${id(5)}:2026-11-25:manual-2026-11-24`);
+  assert.equal(enviados.at(-1).idempotencyKey, `pago:${id(5)}:2026-11-25:manual-2026-11-24-5555`);
   assert.equal(enviados.at(-1).template, 'pago_proximo');
 });
 

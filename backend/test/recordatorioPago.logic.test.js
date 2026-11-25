@@ -44,6 +44,8 @@ test('idempotencyKey determinística y etapas con nombre', () => {
   assert.equal(nombreEtapa(0), 'd0');
   assert.equal(nombreEtapa(3), 'd+3');
   assert.equal(etapaManual('2026-11-24'), 'manual-2026-11-24');
+  assert.equal(etapaManual('2026-11-24', '+52 (55) 1234-5678'), 'manual-2026-11-24-5678');
+  assert.ok(esIdRecordatorioPago(idempotencyKey(CID, '2026-11-27', etapaManual('2026-11-24', '5512345678'))));
   const k = idempotencyKey(CID, '2026-11-27', 'd-3');
   assert.equal(k, `pago:${CID}:2026-11-27:d-3`);
   assert.equal(k, idempotencyKey(CID, '2026-11-27', 'd-3'));
@@ -74,7 +76,9 @@ test('evaluarCliente: a quién le toca y a quién no', () => {
 });
 
 test('parámetros de plantilla con nombre, monto y fecha legibles', () => {
-  assert.match(fechaLegible('2026-12-05'), /^sábado,? 5 de diciembre$/);
+  assert.equal(fechaLegible('2026-12-05'), 'sábado 5 de diciembre');
+  assert.equal(fechaLegible('2026-11-30'), 'lunes 30 de noviembre'); // ejemplo enviado a Meta
+  assert.equal(fechaLegible('2027-01-01'), 'viernes 1 de enero');
   assert.equal(primerNombre('CARLOS PÉREZ'), 'Carlos');
   const p = parametrosPlantilla({ nombre: 'maría josé', monto: 1450 }, '2026-12-05');
   assert.equal(p.body.nombre, 'María');

@@ -40,7 +40,7 @@ const SHARED_ITEMS = [
         </Callout>
         <p><b style={S}>Registro Autónomo</b> — asistente de 3 pasos para dar de alta a un cliente en persona: plan, datos personales, confirmar.</p>
         <p><b style={S}>Pago en Línea</b> — selecciona un cliente, revisa plan/vencimiento/monto, y procesa el cobro por Tarjeta (solo se guardan los últimos 4 dígitos), Transferencia (muestra datos bancarios/CLABE) o Efectivo (indica registrar en recepción). Al confirmar se genera el recibo.</p>
-        <p><b style={S}>Recordatorios</b> — indicadores de próximos a vencer (7 días), vencidos y enviados, con filtro por canal y tabla por cliente.</p>
+        <p><b style={S}>Recordatorios</b> — clientes que vencen en los próximos 7 días o vencieron hace hasta 15, calculados desde la fecha de vencimiento de su ficha. Muestra el estado real de cada recordatorio por WhatsApp (Enviado, Entregado, Leído o Fallido con su motivo) y el botón <b style={S}>Enviar</b> (recepción y administración) para mandarlo a mano. El envío automático es diario, 3 días antes, el día del vencimiento y 3 días después; no se envía a quien no tiene teléfono ni a quien ya tiene un pago registrado en el periodo. Ojo: registrar un pago no cambia la fecha de vencimiento; al renovar hay que actualizarla en Lista → Editar.</p>
         <Callout variant="note" title="Uso actual: solo consulta">
           Esta pantalla sirve para monitorear vencimientos — los botones de envío de la tabla todavía no están conectados a ninguna acción, así que el aviso a cada cliente debe hacerse manualmente por ahora.
         </Callout>
@@ -152,7 +152,7 @@ const ADMIN_ITEMS = [
     title: 'Backoffice de Contenido',
     tag: '/admin/contenido',
     badge: ADMIN_BADGE,
-    dek: 'Edita lo que ve el público en la landing page, en cuatro pestañas.',
+    dek: 'Edita lo que ve el público en la landing page y controla la mensajería por WhatsApp.',
     children: (
       <>
         <ul>
@@ -160,6 +160,7 @@ const ADMIN_ITEMS = [
           <li><b style={S}>Promociones</b> — tarjetas de promoción: nombre, insignia, precio, periodo, color y descripción.</li>
           <li><b style={S}>Coaches</b> — alta/edición/eliminación de coaches del carrusel: nombre, especialidad, descripción y foto.</li>
           <li><b style={S}>Horarios</b> — parrilla semanal: tipos de clase con color, días, franjas horarias y qué clase corre en cada celda.</li>
+          <li><b style={S}>Mensajería</b> — interruptor del recordatorio de pago por WhatsApp (arranca <b style={S}>apagado</b>). Muestra si el servidor está conectado al mensajero y a quién le toca mensaje hoy antes de encenderlo. Apagado, no se envía nada, ni automático ni manual. Se guarda al instante, sin botón de guardar.</li>
         </ul>
         <Callout variant="tip" title="Recuerda guardar cada pestaña">
           Cada pestaña tiene su propio botón de guardado ("Guardar paquetes", "Guardar coaches", etc.) — los cambios no se guardan solos al cambiar de pestaña.

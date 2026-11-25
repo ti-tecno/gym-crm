@@ -11,6 +11,9 @@ const MAP = {
   'Programado': { bg: '#0d1a2b', color: '#4A90D9' },
   'Exitoso':    { bg: '#0d2b1a', color: '#2ECC71' },
   'Fallido':    { bg: '#2b0d0d', color: '#E74C3C' },
+  'Enviando':   { bg: '#0d1a2b', color: '#4A90D9' },
+  'Entregado':  { bg: '#0d2b1a', color: '#2ECC71' },
+  'Leído':      { bg: '#0d2b1a', color: '#2ECC71' },
 };
 
 export default function Badge({ text }) {

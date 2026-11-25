@@ -163,9 +163,15 @@ export function crearServicioRecordatorioPago({ config, mensajero, repo, cliente
 
     const hoy = hoyMx(now());
     const offset = etapaDeHoy(vencimiento, hoy, config.etapas);
-    // Si hoy es día de etapa se usa esa misma llave (así la tarea automática no lo repite);
-    // si no, una etapa "manual" del día (máximo un manual por día y vencimiento).
-    const plan = { vencimiento, etapa: offset !== null ? nombreEtapa(offset) : etapaManual(hoy), dias: diasParaVencer(vencimiento, hoy) };
+    // Si hoy es día de etapa se usa esa misma llave (así la tarea automática no lo repite),
+    // salvo que esa etapa ya haya fallado de forma definitiva (el mensajero conserva la llave).
+    // Si no, una etapa "manual" del día y del teléfono.
+    let etapa = offset !== null ? nombreEtapa(offset) : null;
+    if (etapa) {
+      const previo = await repo.getRecordatorio(idempotencyKey(cliente.clienteId, vencimiento, etapa));
+      if (previo?.estado === ESTADO.FALLIDO && previo.reintentable === false) etapa = null;
+    }
+    const plan = { vencimiento, etapa: etapa || etapaManual(hoy, cliente.telefono), dias: diasParaVencer(vencimiento, hoy) };
 
     const r = await enviar(cliente, plan, { modo: 'manual', usuario });
     if (r.resultado === 'ya_enviado') {

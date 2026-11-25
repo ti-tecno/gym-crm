@@ -64,6 +64,9 @@ export const recordatoriosService = {
   list:   ()            => api.get('/recordatorios').then(r => r.data),
   create: (body)        => api.post('/recordatorios', body).then(r => r.data),
   update: (id, body)    => api.put(`/recordatorios/${id}`, body).then(r => r.data),
+  // Recordatorio de pago por WhatsApp (lista calculada desde clientes.vencimiento)
+  pago:       ()          => api.get('/recordatorios/pago').then(r => r.data),
+  enviarPago: (clienteId) => api.post(`/recordatorios/pago/${clienteId}/enviar`).then(r => r.data),
 };
 
 export const settingsService = {
@@ -74,6 +77,7 @@ export const settingsService = {
   updateSchedule: (schedule)    => api.put('/settings/admin/schedule', { schedule }).then(r => r.data),
   updateCalendar: (calendar)    => api.put('/settings/admin/calendar', { calendar }).then(r => r.data),
   updateCoaches:  (coaches)     => api.put('/settings/admin/coaches',  { coaches  }).then(r => r.data),
+  updateMensajeria: (activo)    => api.put('/settings/admin/mensajeria', { activo }).then(r => r.data),
   uploadCoachImg: (file)        => {
     const form = new FormData();
     form.append('image', file);
