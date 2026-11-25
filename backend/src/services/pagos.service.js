@@ -69,6 +69,9 @@ export function crearServicioPagos({
   now = () => new Date(), generarId = generarPagoId,
 }) {
   const pendientes = new Set();
+  // Configuración de Mercado Pago: se pide en CADA operación a la función proveedora (hoy env,
+  // después settings cifrados). Se acepta un objeto fijo solo por compatibilidad/pruebas.
+  const leerConfig = typeof mpConfig === 'function' ? mpConfig : async () => mpConfig;
 
   /** Mensaje + respuestas atendidas, en segundo plano. Nunca afecta al pago. */
   function despuesDeExitoso(pago, cliente, vencimiento) {
@@ -160,12 +163,12 @@ export function crearServicioPagos({
 
   async function resumenCliente(clienteId) {
     const cliente = await clienteOError(clienteId);
-    const lista = await repo.listPagos({ clienteId, limit: 30 });
+    const [lista, cfg] = await Promise.all([repo.listPagos({ clienteId, limit: 30 }), leerConfig()]);
     const vp = vistaPrevia(cliente);
     return {
-      checkoutDisponible: mpConfig.checkoutDisponible,
-      puedePagar: mpConfig.checkoutDisponible && vp.monto > 0,
-      motivo: !mpConfig.checkoutDisponible
+      checkoutDisponible: cfg.checkoutDisponible,
+      puedePagar: cfg.checkoutDisponible && vp.monto > 0,
+      motivo: !cfg.checkoutDisponible
         ? 'El pago en línea no está disponible por ahora. Puedes pagar en recepción.'
         : (vp.monto > 0 ? null : 'Tu mensualidad no tiene monto registrado. Pasa a recepción para actualizarla.'),
       ...vp,
@@ -179,6 +182,7 @@ export function crearServicioPagos({
    * /pagar/<token>/resultado).
    */
   async function iniciarCheckout(clienteId, { canal = 'portal', token = null, cliente: precargado = null } = {}) {
+    const mpConfig = await leerConfig();
     if (!mpConfig.checkoutDisponible) {
       throw new ErrorPago(503, 'PAGO_EN_LINEA_NO_CONFIGURADO', 'El pago en línea no está disponible por ahora. Puedes pagar en recepción.');
     }
@@ -272,8 +276,8 @@ export function crearServicioPagos({
   }
 
   /** ¿Toca pagar por liga? Solo cerca del vencimiento o ya vencido (evita pagar dos veces con una liga vieja). */
-  function motivoNoPagarLiga(cliente, vp) {
-    if (!mpConfig.checkoutDisponible) return 'El pago en línea no está disponible por ahora. Puedes pagar en recepción.';
+  function motivoNoPagarLiga(cliente, vp, cfg) {
+    if (!cfg.checkoutDisponible) return 'El pago en línea no está disponible por ahora. Puedes pagar en recepción.';
     if (!(vp.monto > 0)) return 'No tenemos registrado el monto de tu mensualidad. Pasa a recepción para pagar.';
     const venc = normalizarFecha(cliente.vencimiento);
     if (venc && diasParaVencer(venc, vp.hoy) > DIAS_ANTES_PAGO_LIGA) {
@@ -286,7 +290,7 @@ export function crearServicioPagos({
   async function datosLiga(token) {
     const cliente = await clienteDeLiga(token);
     const vp = vistaPrevia(cliente);
-    const motivo = motivoNoPagarLiga(cliente, vp);
+    const motivo = motivoNoPagarLiga(cliente, vp, await leerConfig());
     return {
       nombre: primerNombre(cliente.nombre) || null,
       plan: cliente.plan || null,
@@ -301,8 +305,9 @@ export function crearServicioPagos({
 
   async function checkoutLiga(token) {
     const cliente = await clienteDeLiga(token);
-    const motivo = motivoNoPagarLiga(cliente, vistaPrevia(cliente));
-    if (motivo) throw new ErrorPago(mpConfig.checkoutDisponible ? 409 : 503, 'NO_DISPONIBLE', motivo);
+    const cfg = await leerConfig();
+    const motivo = motivoNoPagarLiga(cliente, vistaPrevia(cliente), cfg);
+    if (motivo) throw new ErrorPago(cfg.checkoutDisponible ? 409 : 503, 'NO_DISPONIBLE', motivo);
     const r = await iniciarCheckout(cliente.clienteId, { canal: 'liga', token, cliente });
     return { url: r.url, pagoId: r.pagoId };
   }
@@ -448,6 +453,8 @@ export function crearServicioPagos({
     vistaPrevia, registrarEnMostrador, resumenCliente, iniciarCheckout, estadoParaCliente,
     datosLiga, checkoutLiga, estadoLiga,
     procesarNotificacion, aplicarPagoMp,
+    /** Configuración vigente de Mercado Pago (para el webhook y el Backoffice). */
+    configuracionMercadoPago: leerConfig,
     /** Espera los avisos en segundo plano (pruebas y apagado ordenado). */
     avisosPendientes: () => Promise.allSettled([...pendientes]),
   };

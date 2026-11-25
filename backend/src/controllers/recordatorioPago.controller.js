@@ -4,7 +4,7 @@ import { HttpError } from '../middleware/errorHandler.js';
 import { recordatorioPago } from '../services/recordatorioPago.js';
 import { ErrorRecordatorio } from '../services/recordatorioPago.service.js';
 import { verificarFirma } from '../services/mensajero.client.js';
-import { mensajeroApp, pagoRecibido, respuestas } from '../services/pagos.js';
+import { mensajeroApp, obtenerConfigMercadoPago, pagoRecibido, respuestas } from '../services/pagos.js';
 import { ErrorRespuesta } from '../services/respuestas.service.js';
 
 const aHttp = (e) => (e instanceof ErrorRecordatorio || e instanceof ErrorRespuesta ? new HttpError(e.status, e.code, e.message, e.details) : e);
@@ -19,7 +19,7 @@ async function estadoMensajero() {
 /** GET /recordatorios/pago — lista calculada desde los vencimientos reales (+ estado de la mensajería). */
 export async function listado(_req, res, next) {
   try {
-    const [data, mensajero] = await Promise.all([recordatorioPago.listado(), estadoMensajero()]);
+    const [data, mensajero, mp] = await Promise.all([recordatorioPago.listado(), estadoMensajero(), obtenerConfigMercadoPago()]);
     res.json({
       ...data,
       config: { ...data.config, ligaDisponible: env.MENSAJERO.ligaDisponible },
@@ -27,10 +27,10 @@ export async function listado(_req, res, next) {
       // El mismo interruptor (config.activo) gobierna también el mensaje de pago recibido.
       pagoRecibido: { disponible: env.MENSAJERO.pagoRecibidoDisponible, plantilla: env.MENSAJERO.plantillaPagoRecibido },
       mercadoPago: {
-        checkoutDisponible: env.MERCADOPAGO.checkoutDisponible,
-        webhookDisponible: env.MERCADOPAGO.webhookDisponible,
-        modoPrueba: env.MERCADOPAGO.modoPrueba,
-        avisos: env.MERCADOPAGO.avisos,
+        checkoutDisponible: mp.checkoutDisponible,
+        webhookDisponible: mp.webhookDisponible,
+        modoPrueba: mp.modoPrueba,
+        avisos: mp.avisos,
       },
     });
   } catch (e) { next(aHttp(e)); }

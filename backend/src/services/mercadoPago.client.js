@@ -10,15 +10,22 @@ import crypto from 'node:crypto';
 const BASE = 'https://api.mercadopago.com';
 const TIMEOUT_MS = 10_000; // el aviso de MP espera respuesta en 22 s
 
-export function crearClienteMercadoPago({ accessToken, fetchImpl = globalThis.fetch, timeoutMs = TIMEOUT_MS, base = BASE }) {
+/**
+ * `obtenerConfig` (async) es la fuente del token: se consulta en CADA llamada, para que las
+ * credenciales puedan cambiar sin reiniciar (hoy salen de env; después, de settings).
+ * `accessToken` fijo queda solo por compatibilidad/pruebas.
+ */
+export function crearClienteMercadoPago({ accessToken, obtenerConfig = null, fetchImpl = globalThis.fetch, timeoutMs = TIMEOUT_MS, base = BASE }) {
   /** Nunca lanza: { ok, status, body } (status null si no hubo respuesta). */
   async function llamar(method, path, { body, headers = {} } = {}) {
     let response;
     try {
+      const token = obtenerConfig ? (await obtenerConfig())?.accessToken : accessToken;
+      if (!token) return { ok: false, status: null, body: null, error: 'Mercado Pago sin configurar' };
       response = await fetchImpl(`${base}${path}`, {
         method,
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${token}`,
           ...(body ? { 'Content-Type': 'application/json' } : {}),
           ...headers,
         },

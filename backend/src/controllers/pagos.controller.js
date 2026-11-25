@@ -1,9 +1,8 @@
-import env from '../config/env.js';
 import logger from '../config/logger.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import * as repo from '../repositories/pagos.repo.js';
 import * as clientesRepo from '../repositories/clientes.repo.js';
-import { pagos } from '../services/pagos.js';
+import { obtenerConfigMercadoPago, pagos } from '../services/pagos.js';
 import { ErrorPago } from '../services/pagos.service.js';
 import { verificarFirmaMercadoPago } from '../services/mercadoPago.client.js';
 
@@ -85,7 +84,8 @@ export async function ligaPago(req, res, next) {
  */
 export async function webhookMercadoPago(req, res, next) {
   try {
-    if (!env.MERCADOPAGO.webhookDisponible) {
+    const mpConfig = await obtenerConfigMercadoPago(); // en cada aviso, nunca guardada
+    if (!mpConfig.webhookDisponible) {
       return next(new HttpError(503, 'WEBHOOK_NO_CONFIGURADO', 'Webhook de Mercado Pago sin configurar'));
     }
     const xSignature = req.get('x-signature');
@@ -95,7 +95,7 @@ export async function webhookMercadoPago(req, res, next) {
       return res.json({ ok: true });
     }
     const dataId = typeof req.query['data.id'] === 'string' ? req.query['data.id'] : null;
-    const ok = verificarFirmaMercadoPago({ xSignature, xRequestId: req.get('x-request-id'), dataId, secret: env.MERCADOPAGO.webhookSecret });
+    const ok = verificarFirmaMercadoPago({ xSignature, xRequestId: req.get('x-request-id'), dataId, secret: mpConfig.webhookSecret });
     if (!ok) {
       logger.warn('Aviso de Mercado Pago con firma inválida', { reqId: req.id, ip: req.ip });
       return next(new HttpError(401, 'FIRMA_INVALIDA', 'Firma inválida'));

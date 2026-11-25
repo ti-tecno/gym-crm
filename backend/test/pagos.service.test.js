@@ -480,6 +480,42 @@ test('liga pública: checkout con regreso a la página pública y resultado solo
   assert.notEqual(portal.pagoId, r.pagoId);
 });
 
+// ── Configuración de MP desde una función proveedora (sin guardarla al arrancar) ──
+
+test('config de MP: se pide a la función proveedora en cada operación (cambia sin reiniciar)', async () => {
+  let actual = parseMercadoPagoConfig({});
+  let lecturas = 0;
+  const proveedor = async () => { lecturas += 1; return actual; };
+  const ctx = armar({ mpConfig: proveedor });
+  await assert.rejects(ctx.servicio.iniciarCheckout(id(1)), (e) => e.code === 'PAGO_EN_LINEA_NO_CONFIGURADO');
+  assert.equal((await ctx.servicio.resumenCliente(id(1))).checkoutDisponible, false);
+  // Se configuran las credenciales (p. ej. desde el Backoffice): sin reiniciar ya funciona
+  actual = MP_CONFIG;
+  assert.equal((await ctx.servicio.resumenCliente(id(1))).puedePagar, true);
+  assert.equal((await ctx.servicio.datosLiga(liga(id(1)))).puedePagar, true);
+  assert.ok((await ctx.servicio.iniciarCheckout(id(1))).url);
+  assert.equal((await ctx.servicio.configuracionMercadoPago()).checkoutDisponible, true);
+  assert.ok(lecturas >= 5);
+});
+
+test('cliente de MP: el token sale del proveedor en cada llamada', async () => {
+  const { crearClienteMercadoPago } = await import('../src/services/mercadoPago.client.js');
+  let token = 'APP_USR-uno';
+  const vistos = [];
+  const mp = crearClienteMercadoPago({
+    obtenerConfig: async () => ({ accessToken: token }),
+    fetchImpl: async (_u, init) => { vistos.push(init.headers.Authorization); return new Response('{}', { status: 200 }); },
+  });
+  await mp.obtenerPago('1');
+  token = 'APP_USR-dos';
+  await mp.obtenerPago('1');
+  assert.deepEqual(vistos, ['Bearer APP_USR-uno', 'Bearer APP_USR-dos']);
+  token = '';
+  const r = await mp.obtenerPago('1');
+  assert.equal(r.ok, false);
+  assert.equal(vistos.length, 2); // sin token no se llama a MP
+});
+
 // ── Respuestas: "ya pagué" no renueva; un pago real las atiende ─────────────
 
 test('respuesta "ya pagué" no cambia nada; el pago real la da por atendida', async () => {
