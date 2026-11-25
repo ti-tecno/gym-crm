@@ -24,7 +24,56 @@ const FILTROS = [
   { id: 'fallidos',  label: 'Con falla' },
 ];
 
-export default function Recordatorios() {
+/**
+ * Respuestas de clientes por WhatsApp sin atender. El texto viene del cliente (dato no
+ * confiable): se muestra como texto de React, nunca como HTML. Una respuesta ("ya pagué") no
+ * cambia nada por sí sola: solo un pago registrado o confirmado renueva la membresía.
+ */
+function Respuestas({ items, puedeAtender, onAtender, onRegistrarPago, atendiendo }) {
+  if (!items.length) return null;
+  return (
+    <div style={{ background: COLORS.card, border: `1px solid ${COLORS.blue}55`, borderRadius: 14, padding: '14px 18px', marginBottom: 18 }}>
+      <div style={{ color: COLORS.text, fontWeight: 700, fontSize: 14, marginBottom: 4 }}>💬 Clientes que respondieron por WhatsApp ({items.length})</div>
+      <div style={{ color: COLORS.muted, fontSize: 12, marginBottom: 10 }}>
+        Una respuesta como “ya pagué” no renueva nada: si el cliente pagó en mostrador, regístralo con “Registrar pago”. Al registrarse un pago real, sus respuestas se dan por atendidas solas.
+      </div>
+      {items.map((c) => (
+        <div key={c.clienteId} style={{ borderTop: `1px solid ${COLORS.border}`, padding: '10px 0', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+          <Avatar initials={initials(c.nombre)} size={30} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: COLORS.text, fontSize: 13, fontWeight: 600 }}>
+              {c.nombre} <span style={{ color: COLORS.muted, fontWeight: 400, fontSize: 11 }}>· vence {fmtDia(c.vencimiento)} · {fmtMoney(c.monto)}</span>
+            </div>
+            {c.respuestas.map((r) => (
+              <div key={r.id} style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 6 }}>
+                <div style={{ flex: 1, minWidth: 0, background: COLORS.surface, borderRadius: 8, padding: '6px 10px' }}>
+                  <div style={{ color: COLORS.text, fontSize: 13, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.texto || `[${r.tipo || 'mensaje sin texto'}]`}</div>
+                  <div style={{ color: COLORS.muted, fontSize: 11 }}>
+                    {r.perfil ? `${r.perfil} · ` : ''}{fmtMomento(r.recibidoAt)}{r.origen === 'pago_recibido' ? ' · respondió al comprobante de pago' : r.origen === 'recordatorio' ? ' · respondió al recordatorio' : ''}
+                  </div>
+                </div>
+                {puedeAtender && (
+                  <button onClick={() => onAtender(c, r)} disabled={atendiendo === r.id}
+                          style={{ background: COLORS.border, color: COLORS.muted, border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    {atendiendo === r.id ? '…' : 'Marcar atendida'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {puedeAtender && onRegistrarPago && (
+            <button onClick={() => onRegistrarPago(c.clienteId)}
+                    style={{ background: `${COLORS.accent}22`, color: COLORS.accent, border: 'none', borderRadius: 6, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              💳 Registrar pago
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function Recordatorios({ onRegistrarPago }) {
   const { hasRole } = useAuth();
   const puedeEnviarRol = hasRole('ADMIN', 'RECEP');
   const [data, setData] = useState(null);
@@ -32,10 +81,29 @@ export default function Recordatorios() {
   const [filtro, setFiltro] = useState('todos');
   const [enviando, setEnviando] = useState(null);
   const [aviso, setAviso] = useState(null);
+  const [respuestas, setRespuestas] = useState([]);
+  const [atendiendo, setAtendiendo] = useState(null);
 
-  const cargar = useCallback(() => recordatoriosService.pago()
-    .then((d) => { setData(d); setError(''); })
-    .catch((e) => setError(e?.response?.data?.error || 'No fue posible cargar los recordatorios')), []);
+  const cargarRespuestas = useCallback(() => recordatoriosService.respuestas()
+    .then((d) => setRespuestas(d.items || []))
+    .catch(() => setRespuestas([])), []);
+
+  const cargar = useCallback(() => {
+    cargarRespuestas();
+    return recordatoriosService.pago()
+      .then((d) => { setData(d); setError(''); })
+      .catch((e) => setError(e?.response?.data?.error || 'No fue posible cargar los recordatorios'));
+  }, [cargarRespuestas]);
+
+  const atender = async (c, r) => {
+    setAtendiendo(r.id);
+    try { await recordatoriosService.atenderRespuesta(c.clienteId, r.id); } catch (e) {
+      setAviso({ ok: false, texto: e?.response?.data?.error || 'No se pudo marcar como atendida' });
+    } finally {
+      setAtendiendo(null);
+      cargarRespuestas();
+    }
+  };
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -58,7 +126,7 @@ export default function Recordatorios() {
 
   const { config, items, resumen } = data;
   const ultimo = (it) => it.envios[0] || null;
-  const envioHabilitado = config.envioDisponible && config.activo;
+  const envioHabilitado = config.envioDisponible && config.activo && data.mensajero?.estado !== 'inactiva';
 
   const filtrados = items.filter((it) => {
     if (filtro === 'hoy') return it.tocaHoy;
@@ -93,6 +161,7 @@ export default function Recordatorios() {
       }}>
         {!config.envioDisponible && 'El envío por WhatsApp no está configurado en el servidor. La lista se calcula igual, pero no se envía nada.'}
         {config.envioDisponible && !config.activo && 'El envío de mensajes está APAGADO. Nadie recibe recordatorios hasta que un administrador lo encienda en Backoffice → Mensajería.'}
+        {config.envioDisponible && config.activo && data.mensajero?.estado === 'inactiva' && 'El servicio de mensajería no está activado por SofIA: no sale ningún mensaje aunque el envío esté encendido aquí.'}
         {envioHabilitado && `Envío automático encendido: todos los días a las ${config.hora} (hora de México), ${config.etapas.map((e) => etapaLabel(etapaDeOffset(e)).toLowerCase()).join(', ')}.`}
       </div>
 
@@ -105,6 +174,8 @@ export default function Recordatorios() {
         </div>
       )}
       {error && <div style={{ color: COLORS.red, marginBottom: 10, fontSize: 13 }}>{error}</div>}
+
+      <Respuestas items={respuestas} puedeAtender={puedeEnviarRol} onAtender={atender} onRegistrarPago={onRegistrarPago} atendiendo={atendiendo} />
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         {FILTROS.map((f) => (
@@ -184,7 +255,13 @@ export default function Recordatorios() {
                       <div style={{ color: COLORS.blue, fontSize: 11, marginTop: 4 }}>Le toca hoy: {etapaLabel(it.etapaHoy).toLowerCase()}</div>
                     )}
                   </td>
-                  <td style={{ padding: '14px 18px' }}>
+                  <td style={{ padding: '14px 18px', whiteSpace: 'nowrap' }}>
+                    {puedeEnviarRol && onRegistrarPago && (
+                      <button onClick={() => onRegistrarPago(it.clienteId)} title="Registrar pago cobrado en mostrador"
+                              style={{ background: `${COLORS.accent}22`, color: COLORS.accent, border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: 'pointer', marginRight: 6 }}>
+                        💳 Pago
+                      </button>
+                    )}
                     <button
                       onClick={() => enviar(it)}
                       disabled={Boolean(bloqueo) || enviando !== null}
@@ -205,7 +282,8 @@ export default function Recordatorios() {
       </div>
       <div style={{ color: COLORS.muted, fontSize: 11 }}>
         Se muestran clientes con vencimiento entre hace 15 días y los próximos 7, según la fecha de vencimiento de su ficha.
-        Registrar un pago no cambia esa fecha: actualízala en Lista → Editar al renovar.
+        Cada pago registrado en mostrador o confirmado por Mercado Pago renueva la membresía y mueve esa fecha automáticamente.
+        El recordatorio lleva un botón “Pagar ahora” con la liga de pago en línea del cliente.
       </div>
     </div>
   );

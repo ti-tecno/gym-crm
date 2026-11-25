@@ -12,9 +12,11 @@ export const clientesService = {
   remove: (id)          => api.delete(`/clientes/${id}`).then(r => r.data),
 };
 
+// Pagos cobrados en mostrador (ADMIN / RECEP). Registrar un pago renueva la membresía.
 export const pagosService = {
-  list:   (params = {}) => api.get('/pagos', { params }).then(r => r.data),
-  create: (body)        => api.post('/pagos', body).then(r => r.data),
+  list:        (params = {}) => api.get('/pagos', { params }).then(r => r.data),
+  create:      (body)        => api.post('/pagos', body).then(r => r.data),
+  vistaPrevia: (clienteId)   => api.get('/pagos/vista-previa', { params: { clienteId } }).then(r => r.data),
 };
 
 export const inventarioService = {
@@ -67,6 +69,10 @@ export const recordatoriosService = {
   // Recordatorio de pago por WhatsApp (lista calculada desde clientes.vencimiento)
   pago:       ()          => api.get('/recordatorios/pago').then(r => r.data),
   enviarPago: (clienteId) => api.post(`/recordatorios/pago/${clienteId}/enviar`).then(r => r.data),
+  // Respuestas de clientes por WhatsApp (sin atender)
+  respuestas: ()          => api.get('/recordatorios/respuestas').then(r => r.data),
+  atenderRespuesta: (clienteId, respuestaId) =>
+    api.post(`/recordatorios/respuestas/${clienteId}/${encodeURIComponent(respuestaId)}/atender`).then(r => r.data),
 };
 
 export const settingsService = {

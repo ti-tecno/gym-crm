@@ -31,13 +31,27 @@ export default function BackofficeMensajeria({ Card }) {
 
   const { config, resumen, ultimaCorrida, items } = data;
   const tocanHoy = items.filter((i) => i.tocaHoy);
+  const mensajero = data.mensajero || { estado: 'sin_conexion' };
+  const pagoRecibido = data.pagoRecibido || {};
+  const mp = data.mercadoPago || {};
+  // El interruptor de IronCore se puede encender si hay algo que enviar (recordatorio o pago recibido).
+  const algoConfigurado = config.envioDisponible || pagoRecibido.disponible;
+  const sofia = {
+    activa: { color: COLORS.green, texto: 'Activo (servicio contratado)' },
+    inactiva: { color: COLORS.red, texto: 'Servicio de mensajería no activado por SofIA' },
+    llave_invalida: { color: COLORS.red, texto: 'La llave del mensajero no es válida' },
+    sin_configurar: { color: '#F5A623', texto: 'Sin configurar en el servidor' },
+    sin_conexion: { color: '#F5A623', texto: 'Sin conexión con el mensajero' },
+  }[mensajero.estado] || { color: '#F5A623', texto: mensajero.estado };
+  const salen = config.activo && mensajero.estado === 'activa';
 
   const cambiar = async (activo) => {
     if (activo) {
       const texto = [
-        '¿Encender el envío de recordatorios de pago por WhatsApp?',
+        '¿Encender el envío de mensajes por WhatsApp?',
         '',
-        `Hoy les toca a ${resumen.tocanHoy} cliente(s).`,
+        'Incluye los recordatorios de pago (con su liga para pagar) y el mensaje de pago recibido tras cada pago.',
+        `Hoy les toca recordatorio a ${resumen.tocanHoy} cliente(s).`,
         `Si ya pasó la hora configurada (${config.hora}), se les enviará en el siguiente minuto; si no, a esa hora.`,
         'Los mensajes se cobran por Meta y no se pueden deshacer.',
       ].join('\n');
@@ -65,28 +79,46 @@ export default function BackofficeMensajeria({ Card }) {
         right={(
           <button
             onClick={() => cambiar(!config.activo)}
-            disabled={guardando || (!config.activo && !config.envioDisponible)}
-            title={!config.activo && !config.envioDisponible ? 'Primero hay que configurar la conexión con el mensajero en el servidor' : ''}
+            disabled={guardando || (!config.activo && !algoConfigurado)}
+            title={!config.activo && !algoConfigurado ? 'Primero hay que configurar la conexión con el mensajero en el servidor' : ''}
             style={{
               background: config.activo ? COLORS.red : COLORS.green, color: '#000', border: 'none', borderRadius: 8,
               padding: '8px 16px', fontWeight: 700, cursor: guardando ? 'wait' : 'pointer',
-              opacity: (!config.activo && !config.envioDisponible) ? 0.4 : 1,
+              opacity: (!config.activo && !algoConfigurado) ? 0.4 : 1,
             }}
           >
             {config.activo ? 'Apagar envío' : 'Encender envío'}
           </button>
         )}
       >
-        <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'Barlow Condensed',sans-serif", color: config.activo ? COLORS.green : '#F5A623', marginBottom: 6 }}>
-          {config.activo ? 'ENCENDIDO' : 'APAGADO'}
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 6 }}>
+          <div>
+            <div style={{ color: COLORS.muted, fontSize: 11 }}>1. Interruptor de IronCore (este)</div>
+            <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'Barlow Condensed',sans-serif", color: config.activo ? COLORS.green : '#F5A623' }}>
+              {config.activo ? 'ENCENDIDO' : 'APAGADO'}
+            </div>
+          </div>
+          <div>
+            <div style={{ color: COLORS.muted, fontSize: 11 }}>2. Servicio en el mensajero (lo activa SofIA; solo lectura)</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: sofia.color, marginTop: 4 }}>{sofia.texto}</div>
+          </div>
+        </div>
+        <div style={{ color: salen ? COLORS.green : '#F5A623', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+          {salen ? 'Los dos están encendidos: los mensajes sí salen.' : 'Para que salga cualquier mensaje deben estar encendidos los dos.'}
         </div>
         <div style={{ color: COLORS.muted, fontSize: 12, marginBottom: 12 }}>
           {config.actualizadoAt
             ? `Último cambio: ${new Date(config.actualizadoAt).toLocaleString('es-MX')}${config.actualizadoPor ? ` por ${config.actualizadoPor}` : ''}.`
             : 'Nunca se ha encendido.'}
-          {' '}Apagado, ni la tarea diaria ni el botón “Enviar” de Recordatorios mandan mensajes; la lista se sigue calculando.
+          {' '}Este interruptor gobierna <b>todos</b> los WhatsApp de IronCore: los recordatorios de pago (tarea diaria y botón “Enviar”) y el mensaje
+          de <b>pago recibido</b> que sale tras cada pago exitoso. Apagado, los pagos se registran y renuevan igual, solo que sin mensaje.
         </div>
-        <Fila label="Mensajero configurado"><Si ok={config.envioDisponible} /></Fila>
+        <Fila label="Recordatorio configurado"><Si ok={config.envioDisponible} /></Fila>
+        <Fila label="Liga de pago en el botón"><Si ok={Boolean(config.ligaDisponible)} si="Configurada" no="Falta LIGA_PAGO_SECRET (no se envían recordatorios)" /></Fila>
+        <Fila label="Mensaje de pago recibido"><Si ok={Boolean(pagoRecibido.disponible)} si={`Configurado (${pagoRecibido.plantilla})`} no="Sin conexión con el mensajero" /></Fila>
+        {mensajero.estado === 'activa' && mensajero.sandbox && (
+          <Fila label="Modo del mensajero"><span style={{ color: '#F5A623' }}>Sandbox: solo envía a teléfonos de prueba</span></Fila>
+        )}
         <Fila label="Webhook de estados"><Si ok={config.webhookDisponible} si="Configurado" no="Sin secreto (no se verán entregados/leídos)" /></Fila>
         <Fila label="Hora de envío diario">{config.hora} (hora de México)</Fila>
         <Fila label="Etapas">{config.etapas.map((e) => etapaLabel(etapaDeOffset(e))).join(' · ')}</Fila>
@@ -99,6 +131,16 @@ export default function BackofficeMensajeria({ Card }) {
         {config.avisos?.length > 0 && (
           <ul style={{ color: '#F5A623', fontSize: 12, margin: '12px 0 0', paddingLeft: 18 }}>
             {config.avisos.map((a) => <li key={a}>{a}</li>)}
+          </ul>
+        )}
+      </Card>
+
+      <Card title="Pago en línea (Mercado Pago)">
+        <Fila label="Checkout de Mercado Pago"><Si ok={Boolean(mp.checkoutDisponible)} si={mp.modoPrueba ? 'Configurado (credenciales de PRUEBA)' : 'Configurado'} no="Sin configurar: no aparece el botón de pagar" /></Fila>
+        <Fila label="Avisos (webhook) de pagos"><Si ok={Boolean(mp.webhookDisponible)} si="Configurado" no="Sin configurar: no se confirma ningún pago en línea" /></Fila>
+        {mp.avisos?.length > 0 && (
+          <ul style={{ color: '#F5A623', fontSize: 12, margin: '12px 0 0', paddingLeft: 18 }}>
+            {mp.avisos.map((a) => <li key={a}>{a}</li>)}
           </ul>
         )}
       </Card>
