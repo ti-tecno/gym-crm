@@ -3,7 +3,7 @@ import { COLORS } from '../../constants/theme.js';
 import StatCard from '../../components/ui/StatCard.jsx';
 import Badge from '../../components/ui/Badge.jsx';
 import Avatar from '../../components/ui/Avatar.jsx';
-import { clientesService } from '../../services/modules.service.js';
+import { clientesService, recordatoriosService } from '../../services/modules.service.js';
 import { fmtDate, fmtMoney, initials } from '../../utils/format.js';
 import { sanitizeText } from '../../utils/sanitize.js';
 
@@ -16,6 +16,32 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [recordando, setRecordando] = useState(null);
+  const [avisoEnvio, setAvisoEnvio] = useState(null);
+
+  // Campana: pregunta y envía el recordatorio de pago por WhatsApp solo a ese cliente.
+  const enviarRecordatorio = async (c) => {
+    const nombre = [c.nombre, c.apellido].filter(Boolean).join(' ');
+    if (!c.telefono) { setAvisoEnvio({ ok: false, texto: `${nombre} no tiene WhatsApp registrado. Edita su ficha para agregarlo.` }); return; }
+    const pregunta = [
+      `¿Enviar recordatorio de pago por WhatsApp a ${nombre}?`,
+      '',
+      `Teléfono: ${c.telefono}`,
+      `Monto: ${fmtMoney(c.monto)} · Vence: ${fmtDate(c.vencimiento)}`,
+      '',
+      'El mensaje sale en este momento y no se puede deshacer.',
+    ].join('\n');
+    if (!window.confirm(pregunta)) return;
+    setRecordando(c.clienteId); setAvisoEnvio(null);
+    try {
+      await recordatoriosService.enviarPago(c.clienteId);
+      setAvisoEnvio({ ok: true, texto: `Recordatorio enviado por WhatsApp a ${nombre}. El seguimiento está en la pestaña Recordatorios.` });
+    } catch (e) {
+      setAvisoEnvio({ ok: false, texto: `${nombre}: ${e?.response?.data?.error || 'No se pudo enviar el recordatorio'}` });
+    } finally {
+      setRecordando(null);
+    }
+  };
 
   const reload = async (all = showAll) => {
     setLoadingList(true);
@@ -155,6 +181,18 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
           </button>
         </div>
 
+        {avisoEnvio && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 18px', borderBottom: `1px solid ${COLORS.border}`, color: avisoEnvio.ok ? COLORS.green : COLORS.red, fontSize: 13 }}>
+            <span style={{ flex: 1 }}>{avisoEnvio.texto}</span>
+            {onRecordar && (
+              <button onClick={onRecordar} style={{ background: 'transparent', color: COLORS.blue, border: `1px solid ${COLORS.border}`, borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
+                Ver recordatorios
+              </button>
+            )}
+            <button onClick={() => setAvisoEnvio(null)} aria-label="Cerrar aviso" style={{ background: 'transparent', color: COLORS.muted, border: 'none', fontSize: 14, cursor: 'pointer' }}>✕</button>
+          </div>
+        )}
+
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${COLORS.border}` }}>
@@ -188,7 +226,14 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
                 <td style={{ padding: '13px 18px' }}>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={() => onPagar(c)} title="Registrar pago en mostrador" style={{ background: `${COLORS.accent}22`, color: COLORS.accent, border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>💳 Pagar</button>
-                    <button onClick={onRecordar} style={{ background: `${COLORS.blue}22`, color: COLORS.blue, border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer' }}>🔔</button>
+                    <button
+                      onClick={() => enviarRecordatorio(c)}
+                      disabled={recordando !== null}
+                      title="Enviar recordatorio de pago por WhatsApp"
+                      style={{ background: '#128c7e33', color: '#25d366', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 600, cursor: recordando !== null ? 'wait' : 'pointer', opacity: recordando === c.clienteId ? 0.5 : 1, whiteSpace: 'nowrap' }}
+                    >
+                      {recordando === c.clienteId ? 'Enviando…' : '🔔 Recordar'}
+                    </button>
                     <button onClick={() => openEditor(c)} style={{ background: COLORS.border, color: COLORS.muted, border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, cursor: 'pointer' }}>✏</button>
                   </div>
                 </td>
