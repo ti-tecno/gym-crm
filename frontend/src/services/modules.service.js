@@ -83,7 +83,7 @@ export const settingsService = {
   updateSchedule: (schedule)    => api.put('/settings/admin/schedule', { schedule }).then(r => r.data),
   updateCalendar: (calendar)    => api.put('/settings/admin/calendar', { calendar }).then(r => r.data),
   updateCoaches:  (coaches)     => api.put('/settings/admin/coaches',  { coaches  }).then(r => r.data),
-  updateMensajeria: (activo)    => api.put('/settings/admin/mensajeria', { activo }).then(r => r.data),
+  updateMensajeria: (cambios)   => api.put('/settings/admin/mensajeria', typeof cambios === 'boolean' ? { activo: cambios } : cambios).then(r => r.data),
   // Backoffice → Mercado Pago (credenciales cifradas + teléfono del administrador + código por WhatsApp)
   seguridad:          ()                                   => api.get('/settings/admin/seguridad').then(r => r.data),
   pedirCodigo:        (accion)                             => api.post('/settings/admin/seguridad/codigo', { accion }).then(r => r.data),

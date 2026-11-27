@@ -50,9 +50,10 @@ export default function BackofficeMensajeria({ Card }) {
       const texto = [
         '¿Encender el envío de mensajes por WhatsApp?',
         '',
-        'Incluye los recordatorios de pago (con su liga para pagar) y el mensaje de pago recibido tras cada pago.',
-        `Hoy les toca recordatorio a ${resumen.tocanHoy} cliente(s).`,
-        `Si ya pasó la hora configurada (${config.hora}), se les enviará en el siguiente minuto; si no, a esa hora.`,
+        'Permite mandar recordatorios uno por uno con el botón “Enviar” de Clientes → Recordatorios, y el mensaje de pago recibido tras cada pago.',
+        config.automatico
+          ? `El envío automático diario está ENCENDIDO: hoy les toca recordatorio a ${resumen.tocanHoy} cliente(s) y saldrán a las ${config.hora} (o en el siguiente minuto si ya pasó esa hora).`
+          : 'El envío automático diario está APAGADO: no sale ningún mensaje masivo, solo los que mandes a mano.',
         'Los mensajes se cobran por Meta y no se pueden deshacer.',
       ].join('\n');
       if (!window.confirm(texto)) return;
@@ -61,6 +62,29 @@ export default function BackofficeMensajeria({ Card }) {
     try {
       await settingsService.updateMensajeria(activo);
       setMsg(activo ? 'Envío encendido.' : 'Envío apagado. No se enviará ningún mensaje más.');
+      await cargar();
+    } catch (e) {
+      setError(e?.response?.data?.error || 'No se pudo guardar');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const cambiarAutomatico = async (automatico) => {
+    if (automatico) {
+      const texto = [
+        '¿Encender el envío AUTOMÁTICO diario?',
+        '',
+        `Cada día a las ${config.hora} (hora de México) se enviará el recordatorio a TODOS los clientes a los que les toque, sin revisarlos uno por uno.`,
+        `Hoy les toca a ${resumen.tocanHoy} cliente(s).${config.activo ? ' Si ya pasó esa hora, se les enviará en el siguiente minuto.' : ''}`,
+        'Revisa antes que los teléfonos, montos y vencimientos estén al día.',
+      ].join('\n');
+      if (!window.confirm(texto)) return;
+    }
+    setGuardando(true); setMsg(''); setError('');
+    try {
+      await settingsService.updateMensajeria({ automatico });
+      setMsg(automatico ? 'Envío automático diario encendido.' : 'Envío automático diario apagado. Solo salen los mensajes enviados a mano.');
       await cargar();
     } catch (e) {
       setError(e?.response?.data?.error || 'No se pudo guardar');
@@ -113,6 +137,29 @@ export default function BackofficeMensajeria({ Card }) {
           {' '}Este interruptor gobierna <b>todos</b> los WhatsApp de IronCore: los recordatorios de pago (tarea diaria y botón “Enviar”) y el mensaje
           de <b>pago recibido</b> que sale tras cada pago exitoso. Apagado, los pagos se registran y renuevan igual, solo que sin mensaje.
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '12px 14px', margin: '0 0 12px', border: `1px solid ${COLORS.border}`, borderRadius: 10 }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <div style={{ color: COLORS.muted, fontSize: 11 }}>Envío automático diario (a todos los que les toca)</div>
+            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "'Barlow Condensed',sans-serif", color: config.automatico ? COLORS.green : '#F5A623' }}>
+              {config.automatico ? 'ENCENDIDO' : 'APAGADO · SOLO ENVÍO MANUAL'}
+            </div>
+            <div style={{ color: COLORS.muted, fontSize: 12 }}>
+              {config.automatico
+                ? `Cada día a las ${config.hora} se envía el recordatorio a todos los clientes en etapa.`
+                : 'No sale ningún mensaje masivo. Con el interruptor de arriba encendido, cada recordatorio se manda a una sola persona desde Clientes → Recordatorios, con el botón “Enviar”.'}
+            </div>
+          </div>
+          <button
+            onClick={() => cambiarAutomatico(!config.automatico)}
+            disabled={guardando}
+            style={{
+              background: 'transparent', color: config.automatico ? COLORS.red : COLORS.text, border: `1px solid ${config.automatico ? COLORS.red : COLORS.border}`,
+              borderRadius: 8, padding: '8px 16px', fontWeight: 700, cursor: guardando ? 'wait' : 'pointer',
+            }}
+          >
+            {config.automatico ? 'Apagar automático' : 'Encender automático'}
+          </button>
+        </div>
         <Fila label="Recordatorio configurado"><Si ok={config.envioDisponible} /></Fila>
         <Fila label="Liga de pago en el botón"><Si ok={Boolean(config.ligaDisponible)} si="Configurada" no="Falta LIGA_PAGO_SECRET (no se envían recordatorios)" /></Fila>
         <Fila label="Mensaje de pago recibido"><Si ok={Boolean(pagoRecibido.disponible)} si={`Configurado (${pagoRecibido.plantilla})`} no="Sin conexión con el mensajero" /></Fila>
@@ -145,7 +192,7 @@ export default function BackofficeMensajeria({ Card }) {
         )}
       </Card>
 
-      <Card title={`Hoy (${fmtDia(data.hoy)}): ${resumen.tocanHoy} recordatorio(s) por enviar`}>
+      <Card title={`Hoy (${fmtDia(data.hoy)}): ${resumen.tocanHoy} cliente(s) en etapa de recordatorio${config.automatico ? '' : ' (no se envían solos)'}`}>
         <div style={{ color: COLORS.muted, fontSize: 12, marginBottom: 10 }}>
           Además, {resumen.etapaHoySinTelefono} cliente(s) en etapa hoy no tienen teléfono y {resumen.etapaHoyPagados} ya tienen un pago registrado: a ellos no se les envía.
         </div>

@@ -193,6 +193,9 @@ function normalizeCoach(c = {}, idx = 0) {
 function normalizeMensajeria(m) {
   return {
     activo: m?.activo === true,
+    // Envío automático diario. APAGADO por defecto: con `activo` encendido solo salen los
+    // mensajes que alguien manda a mano (botón “Enviar”) y el de pago recibido.
+    automatico: m?.automatico === true,
     actualizadoPor: typeof m?.actualizadoPor === 'string' ? m.actualizadoPor : null,
     actualizadoAt: typeof m?.actualizadoAt === 'string' ? m.actualizadoAt : null,
   };

@@ -5,7 +5,8 @@
  * probarla sin DynamoDB ni red. El cableado real está en recordatorioPago.js.
  *
  * Fuente de verdad del vencimiento: gym_clientes.vencimiento (yyyy-mm-dd).
- * El interruptor (gym_settings.mensajeria.activo) se lee antes de cada envío.
+ * El interruptor (gym_settings.mensajeria.activo) se lee antes de cada envío. La corrida diaria
+ * exige además `mensajeria.automatico`; sin él solo salen los envíos manuales.
  */
 import {
   ESTADO, ESTADOS_EXITOSOS, diasParaVencer, esIdRecordatorioPago, estadoLocal, estadosPrevios,
@@ -36,6 +37,14 @@ export function crearServicioRecordatorioPago({ config, mensajero, repo, cliente
   async function envioEncendido() {
     const m = await settings.getMensajeria();
     return m?.activo === true;
+  }
+
+  /** Estado para la tarea diaria: 'apagado' | 'solo_manual' | null (puede enviar). */
+  async function bloqueoAutomatico() {
+    const m = await settings.getMensajeria();
+    if (m?.activo !== true) return 'apagado';
+    if (m?.automatico !== true) return 'solo_manual';
+    return null;
   }
 
   async function pagoReciente(clienteId, vencimiento) {
@@ -125,7 +134,8 @@ export function crearServicioRecordatorioPago({ config, mensajero, repo, cliente
     const hoy = hoyMx(now());
     const resumen = { hoy, candidatos: 0, enviados: 0, yaEnviados: 0, sinTelefono: 0, pagados: 0, omitidos: 0, fallidos: 0, detenida: null };
     try {
-      if (!(await envioEncendido())) return { omitida: 'apagado', hoy };
+      const bloqueo = await bloqueoAutomatico();
+      if (bloqueo) return { omitida: bloqueo, hoy };
       const lista = await clientes.listClientes({ all: true });
       for (const cliente of lista) {
         const plan = evaluarCliente(cliente, hoy, config.etapas);
@@ -133,8 +143,9 @@ export function crearServicioRecordatorioPago({ config, mensajero, repo, cliente
         resumen.candidatos += 1;
         if (plan.omitir) { if (!tieneTelefono(cliente.telefono)) resumen.sinTelefono += 1; else resumen.omitidos += 1; continue; }
         if (await pagoReciente(cliente.clienteId, plan.vencimiento)) { resumen.pagados += 1; continue; }
-        // El interruptor se relee antes de cada envío: apagarlo detiene la corrida en curso.
-        if (!(await envioEncendido())) { resumen.detenida = 'apagado'; break; }
+        // Los interruptores se releen antes de cada envío: apagar cualquiera detiene la corrida en curso.
+        const detener = await bloqueoAutomatico();
+        if (detener) { resumen.detenida = detener; break; }
 
         const r = await enviar(cliente, plan, { modo: 'auto' });
         if (r.resultado === 'ya_enviado') resumen.yaEnviados += 1;
@@ -260,6 +271,7 @@ export function crearServicioRecordatorioPago({ config, mensajero, repo, cliente
         envioDisponible: config.envioDisponible,
         webhookDisponible: config.webhookDisponible,
         activo: mensajeria.activo === true,
+        automatico: mensajeria.automatico === true,
         actualizadoPor: mensajeria.actualizadoPor,
         actualizadoAt: mensajeria.actualizadoAt,
         hora: `${String(config.hora.h).padStart(2, '0')}:${String(config.hora.m).padStart(2, '0')}`,

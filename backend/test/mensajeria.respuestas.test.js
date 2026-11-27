@@ -111,7 +111,7 @@ test('CLIENT_DISABLED al enviar: motivo legible, detiene la corrida y no es fall
     },
     clientes: { listClientes: async () => clientes, getCliente: async (i) => clientes.find((c) => c.clienteId === i) },
     pagos: { listPagos: async () => [] },
-    settings: { getMensajeria: async () => ({ activo: true }) },
+    settings: { getMensajeria: async () => ({ activo: true, automatico: true }) },
     logger: { warn() {}, info() {}, error() {} },
     now: () => new Date('2026-11-24T15:00:00Z'),
   });

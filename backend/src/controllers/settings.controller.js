@@ -109,16 +109,21 @@ export async function updateCoaches(req, res, next) {
 // explícito: cualquier otra cosa no cambia nada.
 export async function updateMensajeria(req, res, next) {
   try {
-    if (typeof req.body?.activo !== 'boolean') {
-      return next(new HttpError(400, 'VALIDATION_ERROR', 'Se espera { activo: true | false }'));
+    const { activo, automatico } = req.body ?? {};
+    const hayActivo = typeof activo === 'boolean';
+    const hayAutomatico = typeof automatico === 'boolean';
+    if ((!hayActivo && !hayAutomatico) || (activo !== undefined && !hayActivo) || (automatico !== undefined && !hayAutomatico)) {
+      return next(new HttpError(400, 'VALIDATION_ERROR', 'Se espera { activo: true | false } y/o { automatico: true | false }'));
     }
+    const actual = await repo.getMensajeria();
     const mensajeria = {
-      activo: req.body.activo,
+      activo: hayActivo ? activo : actual.activo === true,
+      automatico: hayAutomatico ? automatico : actual.automatico === true,
       actualizadoPor: req.user?.email || req.user?.sub || null,
       actualizadoAt: new Date().toISOString(),
     };
     const data = await repo.saveSettings({ mensajeria });
-    logger.info('Recordatorio de pago por WhatsApp ' + (mensajeria.activo ? 'ENCENDIDO' : 'APAGADO'), { por: mensajeria.actualizadoPor });
+    logger.info('Mensajería por WhatsApp: envío ' + (mensajeria.activo ? 'ENCENDIDO' : 'APAGADO') + ', envío automático diario ' + (mensajeria.automatico ? 'ENCENDIDO' : 'APAGADO'), { por: mensajeria.actualizadoPor });
     res.json({ mensajeria: data.mensajeria });
   } catch (e) {
     next(e);

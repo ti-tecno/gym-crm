@@ -71,3 +71,14 @@ Las tres plantillas **sin botón** (`ironcore_pago_por_vencer`, `ironcore_pago_v
 5. **Encender** en Backoffice → Mensajería. Si ya pasó la hora configurada, la corrida del día sale en el siguiente minuto.
 
 Para apagarlo de inmediato: Backoffice → Mensajería → "Apagar envío" (la corrida en curso se detiene antes del siguiente mensaje).
+
+## Envío automático diario (segundo interruptor)
+
+Backoffice → Mensajería tiene dos interruptores, ambos apagados al inicio:
+
+- **Envío** (`mensajeria.activo`): permite que salga cualquier WhatsApp de IronCore.
+- **Envío automático diario** (`mensajeria.automatico`): permite la corrida diaria a todos los clientes en etapa.
+
+Con el primero encendido y el segundo apagado, IronCore solo envía los recordatorios que alguien manda a una
+persona con el botón "Enviar" de Clientes → Recordatorios (y el mensaje de pago recibido). La corrida diaria
+responde `solo_manual` y no envía nada. `PUT /settings/admin/mensajeria` acepta `{ activo }` y/o `{ automatico }`.
