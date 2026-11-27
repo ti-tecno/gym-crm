@@ -32,7 +32,7 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
   useEffect(() => { reload(); }, []);
 
   // Sin acentos ni mayúsculas, para que "fabian" encuentre "Fabián".
-  const plano = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const plano = (t) => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const cleanSearch = plano(sanitizeText(search)).trim();
   const digitos = cleanSearch.replace(/\D/g, '');
 
