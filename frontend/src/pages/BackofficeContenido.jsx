@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import SectionHeader from "../components/ui/SectionHeader.jsx";
 import TabBar from "../components/ui/TabBar.jsx";
 import { COLORS } from "../constants/theme.js";
@@ -14,14 +15,29 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-const TABS = [
-  { id: "packages",   icon: "💳", label: "Paquetes" },
-  { id: "promotions", icon: "🎉", label: "Promociones" },
-  { id: "coaches",    icon: "🏋️", label: "Coaches" },
-  { id: "schedule",   icon: "🗓", label: "Horarios" },
-  { id: "mensajeria", icon: "📱", label: "Mensajería" },
-  { id: "mercadopago", icon: "🔐", label: "Mercado Pago" },
+// Dos grupos: lo que ve el público en la página de inicio y lo que configura cobros y mensajes.
+const GRUPOS = [
+  {
+    id: "sitio",
+    titulo: "Página pública",
+    tabs: [
+      { id: "packages",   icon: "💳", label: "Paquetes",    sub: "Planes y precios que se muestran en la página de inicio." },
+      { id: "promotions", icon: "🎉", label: "Promociones", sub: "Ofertas vigentes que se muestran en la página de inicio." },
+      { id: "coaches",    icon: "🏋️", label: "Coaches",     sub: "Entrenadores que aparecen en la página de inicio, con su foto." },
+      { id: "schedule",   icon: "🗓", label: "Horarios",    sub: "Tipos de clase y calendario semanal de la página de inicio." },
+    ],
+  },
+  {
+    id: "cobros",
+    titulo: "Cobros y mensajes",
+    tabs: [
+      { id: "mensajeria",  icon: "📱", label: "Mensajería",   sub: "Enciende o apaga los mensajes de WhatsApp a los clientes y revisa su estado." },
+      { id: "mercadopago", icon: "🔐", label: "Mercado Pago", sub: "Credenciales para cobrar en línea y teléfono del administrador." },
+    ],
+  },
 ];
+const TABS = GRUPOS.flatMap((g) => g.tabs);
+const TAB_INICIAL = "packages";
 
 function Card({ title, children, right }) {
   return (
@@ -51,7 +67,15 @@ function Card({ title, children, right }) {
 }
 
 export default function BackofficeContenido() {
-  const [tab, setTab] = useState("packages");
+  // La sección activa vive en la dirección (?seccion=…): se conserva al recargar y se puede compartir.
+  const [params, setParams] = useSearchParams();
+  const pedida = params.get("seccion");
+  const tab = TABS.some((t) => t.id === pedida) ? pedida : TAB_INICIAL;
+  const setTab = (id) => {
+    setMsg("");
+    setErr("");
+    setParams(id === TAB_INICIAL ? {} : { seccion: id }, { replace: true });
+  };
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
@@ -320,10 +344,33 @@ export default function BackofficeContenido() {
   return (
     <div>
       <SectionHeader
-        title="Backoffice de Contenido"
-        sub="Administra paquetes, promociones y horarios del landing"
+        title="Backoffice"
+        sub="Contenido de la página pública, mensajes de WhatsApp y cobro en línea"
       />
-      <TabBar tabs={TABS} active={tab} onChange={setTab} />
+      <div style={{ display: "flex", gap: "4px 28px", flexWrap: "wrap" }}>
+        {GRUPOS.map((g) => (
+          <div key={g.id}>
+            <div
+              style={{
+                color: COLORS.muted,
+                fontSize: 11,
+                letterSpacing: 2,
+                textTransform: "uppercase",
+                fontFamily: "'DM Mono',monospace",
+                marginBottom: 6,
+              }}
+            >
+              {g.titulo}
+            </div>
+            <div style={{ overflowX: "auto", maxWidth: "100%" }}>
+              <TabBar tabs={g.tabs} active={tab} onChange={setTab} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <p style={{ margin: "-8px 0 18px", color: COLORS.muted, fontSize: 13 }}>
+        {TABS.find((t) => t.id === tab)?.sub}
+      </p>
 
       {msg && (
         <div style={{ color: COLORS.green, marginBottom: 10 }}>{msg}</div>

@@ -12,6 +12,10 @@ function Fila({ label, children }) {
   );
 }
 
+const Subtitulo = ({ children }) => (
+  <div style={{ color: COLORS.subtle, fontSize: 12, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', margin: '14px 0 4px' }}>{children}</div>
+);
+
 const Si = ({ ok, si = 'Sí', no = 'No' }) => <span style={{ color: ok ? COLORS.green : COLORS.red, fontWeight: 600 }}>{ok ? si : no}</span>;
 
 /** Backoffice → Mensajería (solo ADMIN): interruptor del recordatorio de pago por WhatsApp. */
@@ -99,7 +103,7 @@ export default function BackofficeMensajeria({ Card }) {
       {error && <div style={{ color: COLORS.red, marginBottom: 10 }}>{error}</div>}
 
       <Card
-        title="Recordatorio de pago por WhatsApp"
+        title="Envío de mensajes por WhatsApp"
         right={(
           <button
             onClick={() => cambiar(!config.activo)}
@@ -160,6 +164,29 @@ export default function BackofficeMensajeria({ Card }) {
             {config.automatico ? 'Apagar automático' : 'Encender automático'}
           </button>
         </div>
+      </Card>
+
+      <Card title={`Hoy (${fmtDia(data.hoy)}): ${resumen.tocanHoy} cliente(s) en etapa de recordatorio${config.automatico ? '' : ' (no se envían solos)'}`}>
+        <div style={{ color: COLORS.muted, fontSize: 12, marginBottom: 10 }}>
+          Además, {resumen.etapaHoySinTelefono} cliente(s) en etapa hoy no tienen teléfono y {resumen.etapaHoyPagados} ya tienen un pago registrado: a ellos no se les envía.
+        </div>
+        {tocanHoy.length === 0
+          ? <div style={{ color: COLORS.muted, fontSize: 13 }}>Nadie más recibe mensaje hoy.</div>
+          : (
+            <ul style={{ margin: 0, paddingLeft: 18, color: COLORS.text, fontSize: 13, lineHeight: 1.8 }}>
+              {tocanHoy.map((i) => (
+                <li key={i.clienteId}>
+                  {i.nombre} · {etapaLabel(i.etapaHoy).toLowerCase()} (vence {fmtDia(i.vencimiento)}) · {i.telefono}
+                </li>
+              ))}
+            </ul>
+          )}
+      </Card>
+      <Card title="Estado de la configuración">
+        <div style={{ color: COLORS.muted, fontSize: 12, marginBottom: 10 }}>
+          Datos técnicos del servidor, solo de consulta. Si algo aparece en rojo, avisa a SofIA.
+        </div>
+        <Subtitulo>Mensajes de WhatsApp</Subtitulo>
         <Fila label="Recordatorio configurado"><Si ok={config.envioDisponible} /></Fila>
         <Fila label="Liga de pago en el botón"><Si ok={Boolean(config.ligaDisponible)} si="Configurada" no="Falta LIGA_PAGO_SECRET (no se envían recordatorios)" /></Fila>
         <Fila label="Mensaje de pago recibido"><Si ok={Boolean(pagoRecibido.disponible)} si={`Configurado (${pagoRecibido.plantilla})`} no="Sin conexión con el mensajero" /></Fila>
@@ -180,9 +207,7 @@ export default function BackofficeMensajeria({ Card }) {
             {config.avisos.map((a) => <li key={a}>{a}</li>)}
           </ul>
         )}
-      </Card>
-
-      <Card title="Pago en línea (Mercado Pago)">
+        <Subtitulo>Pago en línea (Mercado Pago)</Subtitulo>
         <Fila label="Checkout de Mercado Pago"><Si ok={Boolean(mp.checkoutDisponible)} si={mp.modoPrueba ? 'Configurado (credenciales de PRUEBA)' : 'Configurado'} no="Sin configurar: no aparece el botón de pagar" /></Fila>
         <Fila label="Avisos (webhook) de pagos"><Si ok={Boolean(mp.webhookDisponible)} si="Configurado" no="Sin configurar: no se confirma ningún pago en línea" /></Fila>
         {mp.avisos?.length > 0 && (
@@ -190,23 +215,7 @@ export default function BackofficeMensajeria({ Card }) {
             {mp.avisos.map((a) => <li key={a}>{a}</li>)}
           </ul>
         )}
-      </Card>
 
-      <Card title={`Hoy (${fmtDia(data.hoy)}): ${resumen.tocanHoy} cliente(s) en etapa de recordatorio${config.automatico ? '' : ' (no se envían solos)'}`}>
-        <div style={{ color: COLORS.muted, fontSize: 12, marginBottom: 10 }}>
-          Además, {resumen.etapaHoySinTelefono} cliente(s) en etapa hoy no tienen teléfono y {resumen.etapaHoyPagados} ya tienen un pago registrado: a ellos no se les envía.
-        </div>
-        {tocanHoy.length === 0
-          ? <div style={{ color: COLORS.muted, fontSize: 13 }}>Nadie más recibe mensaje hoy.</div>
-          : (
-            <ul style={{ margin: 0, paddingLeft: 18, color: COLORS.text, fontSize: 13, lineHeight: 1.8 }}>
-              {tocanHoy.map((i) => (
-                <li key={i.clienteId}>
-                  {i.nombre} · {etapaLabel(i.etapaHoy).toLowerCase()} (vence {fmtDia(i.vencimiento)}) · {i.telefono}
-                </li>
-              ))}
-            </ul>
-          )}
       </Card>
     </>
   );

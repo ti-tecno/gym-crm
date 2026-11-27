@@ -24,7 +24,7 @@ export const NAV_ITEMS = [
   { id: 'creditos',   to: '/creditos',            icon: '⚖', label: 'Créditos' },
   { id: 'rutinas',    to: '/rutinas/clientes',    icon: '◷', label: 'Rutinas Clientes' },
   { id: 'coach',      to: '/rutinas/coach',       icon: '◐', label: 'Rutinas Coach' },
-  { id: 'contenido',  to: '/admin/contenido',     icon: '⚙', label: 'Backoffice Contenido', adminOnly: true },
+  { id: 'contenido',  to: '/admin/contenido',     icon: '⚙', label: 'Backoffice', adminOnly: true },
   { id: 'manual',     to: '/admin/manual',        icon: '◌', label: 'Manual', adminOnly: true },
 ];
 
