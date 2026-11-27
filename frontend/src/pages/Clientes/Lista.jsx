@@ -31,11 +31,27 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
 
   useEffect(() => { reload(); }, []);
 
-  const cleanSearch = sanitizeText(search).toLowerCase();
-  const filtered = useMemo(() => items.filter((c) =>
-    (!plan || c.plan === plan) &&
-    (!cleanSearch || c.nombre.toLowerCase().includes(cleanSearch))
-  ), [items, plan, cleanSearch]);
+  // Sin acentos ni mayúsculas, para que "fabian" encuentre "Fabián".
+  const plano = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const cleanSearch = plano(sanitizeText(search)).trim();
+  const digitos = cleanSearch.replace(/\D/g, '');
+
+  // Buscar o filtrar por plan aplica sobre TODOS los clientes, no solo sobre los primeros 100:
+  // la primera vez que se usa, se carga la lista completa.
+  const necesitaTodos = Boolean(cleanSearch || plan);
+  useEffect(() => {
+    if (!necesitaTodos || showAll) return;
+    setShowAll(true);
+    reload(true);
+  }, [necesitaTodos]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filtered = useMemo(() => items.filter((c) => {
+    if (plan && c.plan !== plan) return false;
+    if (!cleanSearch) return true;
+    const texto = plano(`${c.nombre || ''} ${c.apellido || ''} ${c.email || ''}`);
+    if (cleanSearch.split(/\s+/).every((palabra) => texto.includes(palabra))) return true;
+    return digitos.length >= 4 && String(c.telefono || '').replace(/\D/g, '').includes(digitos);
+  }), [items, plan, cleanSearch, digitos]);
 
   const openEditor = (cliente) => {
     setError('');
@@ -101,7 +117,7 @@ export default function Lista({ onNuevo, onPagar, onRecordar }) {
         <div style={{ padding: '14px 18px', borderBottom: `1px solid ${COLORS.border}`, display: 'flex', gap: 12, alignItems: 'center' }}>
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
-            maxLength={60} placeholder="Buscar cliente…"
+            maxLength={60} placeholder="Buscar en todos los clientes: nombre, correo o teléfono…"
             style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: '8px 14px', color: COLORS.text, fontSize: 13, flex: 1, outline: 'none', fontFamily: 'inherit' }}
           />
           <select
