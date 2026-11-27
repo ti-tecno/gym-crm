@@ -79,6 +79,7 @@ export default function Recordatorios({ onRegistrarPago }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [filtro, setFiltro] = useState('todos');
+  const [busqueda, setBusqueda] = useState('');
   const [enviando, setEnviando] = useState(null);
   const [aviso, setAviso] = useState(null);
   const [respuestas, setRespuestas] = useState([]);
@@ -108,6 +109,15 @@ export default function Recordatorios({ onRegistrarPago }) {
   useEffect(() => { cargar(); }, [cargar]);
 
   const enviar = async (it) => {
+    const pregunta = [
+      `¿Enviar recordatorio de pago por WhatsApp a ${it.nombre}?`,
+      '',
+      `Teléfono: ${it.telefono}`,
+      `Monto: ${fmtMoney(it.monto)} · Vence: ${fmtDia(it.vencimiento)}`,
+      '',
+      'El mensaje sale en este momento y no se puede deshacer.',
+    ].join('\n');
+    if (!window.confirm(pregunta)) return;
     setEnviando(it.clienteId);
     setAviso(null);
     try {
@@ -128,7 +138,19 @@ export default function Recordatorios({ onRegistrarPago }) {
   const ultimo = (it) => it.envios[0] || null;
   const envioHabilitado = config.envioDisponible && config.activo && data.mensajero?.estado !== 'inactiva';
 
+  // Buscador: nombre, correo o teléfono, sin distinguir acentos ni mayúsculas.
+  const plano = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const termino = plano(busqueda).trim();
+  const digitos = termino.replace(/\D/g, '');
+  const coincide = (it) => {
+    if (!termino) return true;
+    const texto = plano(`${it.nombre || ''} ${it.email || ''}`);
+    if (termino.split(/\s+/).every((palabra) => texto.includes(palabra))) return true;
+    return digitos.length >= 4 && String(it.telefono || '').replace(/\D/g, '').includes(digitos);
+  };
+
   const filtrados = items.filter((it) => {
+    if (!coincide(it)) return false;
     if (filtro === 'hoy') return it.tocaHoy;
     if (filtro === 'porVencer') return it.dias >= 0;
     if (filtro === 'vencidos') return it.dias < 0;
@@ -177,6 +199,11 @@ export default function Recordatorios({ onRegistrarPago }) {
 
       <Respuestas items={respuestas} puedeAtender={puedeEnviarRol} onAtender={atender} onRegistrarPago={onRegistrarPago} atendiendo={atendiendo} />
 
+      <input
+        value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
+        maxLength={60} placeholder="Buscar por nombre, correo o teléfono…" aria-label="Buscar cliente en recordatorios"
+        style={{ width: '100%', boxSizing: 'border-box', background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 8, padding: '9px 14px', color: COLORS.text, fontSize: 13, outline: 'none', marginBottom: 12 }}
+      />
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         {FILTROS.map((f) => (
           <button key={f.id} onClick={() => setFiltro(f.id)}
@@ -205,7 +232,7 @@ export default function Recordatorios({ onRegistrarPago }) {
           </thead>
           <tbody>
             {filtrados.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: '18px', color: COLORS.muted, fontSize: 13 }}>No hay clientes en este filtro.</td></tr>
+              <tr><td colSpan={6} style={{ padding: '18px', color: COLORS.muted, fontSize: 13 }}>{termino ? 'Nadie coincide con la búsqueda. Aquí solo aparecen clientes con vencimiento entre hace 15 días y los próximos 7; a cualquier otro se le envía desde la pestaña Lista, con el botón Recordar.' : 'No hay clientes en este filtro.'}</td></tr>
             )}
             {filtrados.map((it) => {
               const u = ultimo(it);
@@ -271,7 +298,7 @@ export default function Recordatorios({ onRegistrarPago }) {
                         border: 'none', borderRadius: 6, padding: '5px 12px', fontSize: 11,
                         cursor: bloqueo || enviando !== null ? 'not-allowed' : 'pointer', opacity: enviando === it.clienteId ? 0.6 : 1,
                       }}>
-                      {enviando === it.clienteId ? 'Enviando…' : 'Enviar'}
+                      {enviando === it.clienteId ? 'Enviando…' : '📱 Enviar WhatsApp'}
                     </button>
                   </td>
                 </tr>
