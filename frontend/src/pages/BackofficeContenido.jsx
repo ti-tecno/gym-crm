@@ -39,6 +39,170 @@ const GRUPOS = [
 const TABS = GRUPOS.flatMap((g) => g.tabs);
 const TAB_INICIAL = "packages";
 
+// Campos del Backoffice: mismo aspecto en todas las secciones (los estilos en línea siguen mandando).
+const ESTILOS_CAMPOS = `
+.bo input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=file]),
+.bo select,
+.bo textarea {
+  background: ${COLORS.surface};
+  color: ${COLORS.text};
+  border: 1px solid ${COLORS.border};
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.bo textarea { line-height: 1.5; resize: vertical; }
+.bo input:focus-visible, .bo select:focus-visible, .bo textarea:focus-visible { border-color: ${COLORS.accent}; }
+.bo input::placeholder, .bo textarea::placeholder { color: ${COLORS.muted}; }
+.bo input[type=checkbox] { accent-color: ${COLORS.accent}; width: 16px; height: 16px; }
+.bo .bo-campo { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.bo .bo-campo > span { color: ${COLORS.muted}; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+.bo .bo-campo > small { color: ${COLORS.muted}; font-size: 11px; }
+.bo .bo-campo input, .bo .bo-campo select, .bo .bo-campo textarea { width: 100%; }
+`;
+
+const PERIODOS = [
+  { id: "mes", label: "Mes" },
+  { id: "trimestre", label: "Trimestre" },
+  { id: "semestre", label: "Semestre" },
+  { id: "anualidad", label: "Anualidad" },
+  { id: "año", label: "Año" },
+];
+
+const esHex = (v) => /^#[0-9a-fA-F]{6}$/.test(String(v || ""));
+
+function Campo({ label, ayuda, children }) {
+  return (
+    <label className="bo-campo">
+      <span>{label}</span>
+      {children}
+      {ayuda && <small>{ayuda}</small>}
+    </label>
+  );
+}
+
+/** Backoffice → Paquetes: un bloque por plan, con cada dato etiquetado. */
+function PaquetesEditor({ packages, setPackages }) {
+  const cambiar = (i, cambios) =>
+    setPackages((prev) => prev.map((x, idx) => (idx === i ? { ...x, ...cambios } : x)));
+  const quitar = (i, nombre) => {
+    if (!window.confirm(`¿Eliminar el plan "${nombre || "sin nombre"}"? Se quita de la página pública al guardar.`)) return;
+    setPackages((prev) => prev.filter((_, idx) => idx !== i));
+  };
+
+  if (!packages.length) {
+    return <div style={{ color: COLORS.muted, fontSize: 13 }}>Todavía no hay planes. Usa “+ Agregar plan”.</div>;
+  }
+
+  return (
+    <div style={{ display: "grid", gap: 14 }}>
+      {packages.map((p, i) => {
+        const color = esHex(p.color) ? p.color : COLORS.accent;
+        const periodo = PERIODOS.find((x) => x.id === p.periodo)?.label || "Trimestre";
+        return (
+          <div
+            key={i}
+            style={{
+              border: `1px solid ${COLORS.border}`,
+              borderLeft: `4px solid ${color}`,
+              borderRadius: 12,
+              padding: 16,
+              background: COLORS.surface + "55",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+              <div style={{ color: COLORS.text, fontSize: 18, fontWeight: 800, fontFamily: "'Barlow Condensed',sans-serif" }}>
+                {p.nombre || "Plan sin nombre"}
+              </div>
+              <div style={{ color: COLORS.muted, fontSize: 13 }}>
+                ${Number(p.precio || 0).toLocaleString("es-MX")} / {periodo.toLowerCase()}
+              </div>
+              {p.destacado && (
+                <span style={{ background: hexToRgba(color, 0.18), color, borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700 }}>
+                  Destacado
+                </span>
+              )}
+              <button
+                onClick={() => quitar(i, p.nombre)}
+                style={{
+                  marginLeft: "auto",
+                  background: "transparent",
+                  color: COLORS.red,
+                  border: `1px solid ${COLORS.red}`,
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                }}
+              >
+                Eliminar plan
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
+              <Campo label="Nombre del plan">
+                <input value={p.nombre || ""} onChange={(e) => cambiar(i, { nombre: e.target.value })} placeholder="Mensual" />
+              </Campo>
+              <Campo label="Precio (MXN)">
+                <input
+                  type="number"
+                  min="0"
+                  value={p.precio ?? 0}
+                  onChange={(e) => cambiar(i, { precio: Number(e.target.value || 0) })}
+                  placeholder="500"
+                />
+              </Campo>
+              <Campo label="Se cobra cada">
+                <select value={PERIODOS.some((x) => x.id === p.periodo) ? p.periodo : "trimestre"} onChange={(e) => cambiar(i, { periodo: e.target.value })}>
+                  {PERIODOS.map((x) => (
+                    <option key={x.id} value={x.id}>{x.label}</option>
+                  ))}
+                </select>
+              </Campo>
+              <Campo label="Color">
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={(e) => cambiar(i, { color: e.target.value.toUpperCase() })}
+                    aria-label="Elegir color del plan"
+                    style={{ width: 38, height: 36, padding: 0, border: `1px solid ${COLORS.border}`, borderRadius: 8, background: "transparent", cursor: "pointer", flexShrink: 0 }}
+                  />
+                  <input value={p.color || ""} onChange={(e) => cambiar(i, { color: e.target.value })} placeholder="#CF1B36" style={{ fontFamily: "'DM Mono',monospace" }} />
+                </div>
+              </Campo>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginTop: 12 }}>
+              <Campo label="Qué incluye" ayuda="Un beneficio por línea.">
+                <textarea
+                  rows={5}
+                  value={(p.features || []).join("\n")}
+                  onChange={(e) => cambiar(i, { features: e.target.value.split("\n") })}
+                  placeholder={"Acceso completo al gimnasio\nVestidores y casilleros"}
+                />
+              </Campo>
+              <div style={{ display: "grid", gap: 12, alignContent: "start" }}>
+                <Campo label="Identificador interno" ayuda="Clave del plan en el sistema. No la cambies si el plan ya está en uso.">
+                  <input value={p.id || ""} onChange={(e) => cambiar(i, { id: e.target.value })} placeholder="mensual" style={{ fontFamily: "'DM Mono',monospace" }} />
+                </Campo>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, color: COLORS.text, fontSize: 13, cursor: "pointer" }}>
+                  <input type="checkbox" checked={!!p.destacado} onChange={(e) => cambiar(i, { destacado: e.target.checked })} />
+                  Destacar este plan en la página pública
+                </label>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function Card({ title, children, right }) {
   return (
     <div
@@ -342,7 +506,8 @@ export default function BackofficeContenido() {
     return <div style={{ color: COLORS.muted }}>Cargando configuración…</div>;
 
   return (
-    <div>
+    <div className="bo">
+      <style>{ESTILOS_CAMPOS}</style>
       <SectionHeader
         title="Backoffice"
         sub="Contenido de la página pública, mensajes de WhatsApp y cobro en línea"
@@ -390,7 +555,7 @@ export default function BackofficeContenido() {
                       id: `plan-${Date.now()}`,
                       nombre: "",
                       precio: 0,
-                      periodo: "trimestre",
+                      periodo: "mes",
                       features: [],
                       color: COLORS.accent,
                       destacado: false,
@@ -425,152 +590,7 @@ export default function BackofficeContenido() {
             </div>
           }
         >
-          <div style={{ display: "grid", gap: 12 }}>
-            {packages.map((p, i) => (
-              <div
-                key={p.id || i}
-                style={{
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: 10,
-                  padding: 12,
-                }}
-              >
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr 120px 140px",
-                    gap: 8,
-                  }}
-                >
-                  <input
-                    value={p.id || ""}
-                    onChange={(e) =>
-                      setPackages((prev) =>
-                        prev.map((x, idx) =>
-                          idx === i ? { ...x, id: e.target.value } : x,
-                        ),
-                      )
-                    }
-                    placeholder="ID (ej: basico)"
-                  />
-                  <input
-                    value={p.nombre || ""}
-                    onChange={(e) =>
-                      setPackages((prev) =>
-                        prev.map((x, idx) =>
-                          idx === i ? { ...x, nombre: e.target.value } : x,
-                        ),
-                      )
-                    }
-                    placeholder="Nombre"
-                  />
-                  <input
-                    type="number"
-                    value={p.precio ?? 0}
-                    onChange={(e) =>
-                      setPackages((prev) =>
-                        prev.map((x, idx) =>
-                          idx === i
-                            ? { ...x, precio: Number(e.target.value || 0) }
-                            : x,
-                        ),
-                      )
-                    }
-                    placeholder="Precio"
-                  />
-                  <select
-                    value={p.periodo || "trimestre"}
-                    onChange={(e) =>
-                      setPackages((prev) =>
-                        prev.map((x, idx) =>
-                          idx === i ? { ...x, periodo: e.target.value } : x,
-                        ),
-                      )
-                    }
-                  >
-                    <option value="trimestre">Trimestre</option>
-                    <option value="semestre">Semestre</option>
-                    <option value="anualidad">Anualidad</option>
-                  </select>
-                </div>
-
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr auto auto",
-                    gap: 8,
-                    marginTop: 8,
-                    alignItems: "center",
-                  }}
-                >
-                  <input
-                    value={p.color || ""}
-                    onChange={(e) =>
-                      setPackages((prev) =>
-                        prev.map((x, idx) =>
-                          idx === i ? { ...x, color: e.target.value } : x,
-                        ),
-                      )
-                    }
-                    placeholder="Color HEX (#CF1B36)"
-                  />
-                  <label style={{ color: COLORS.muted, fontSize: 12 }}>
-                    <input
-                      type="checkbox"
-                      checked={!!p.destacado}
-                      onChange={(e) =>
-                        setPackages((prev) =>
-                          prev.map((x, idx) =>
-                            idx === i
-                              ? { ...x, destacado: e.target.checked }
-                              : x,
-                          ),
-                        )
-                      }
-                    />{" "}
-                    Destacado
-                  </label>
-                  <button
-                    onClick={() =>
-                      setPackages((prev) => prev.filter((_, idx) => idx !== i))
-                    }
-                    style={{
-                      background: COLORS.red,
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 6,
-                      padding: "6px 10px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Eliminar
-                  </button>
-                </div>
-
-                <textarea
-                  value={(p.features || []).join("\n")}
-                  onChange={(e) =>
-                    setPackages((prev) =>
-                      prev.map((x, idx) =>
-                        idx === i
-                          ? {
-                              ...x,
-                              features: e.target.value
-                                .split("\n")
-                                .map((s) => s.trim())
-                                .filter(Boolean),
-                            }
-                          : x,
-                      ),
-                    )
-                  }
-                  rows={4}
-                  style={{ width: "100%", marginTop: 8 }}
-                  placeholder="Una característica por línea"
-                />
-              </div>
-            ))}
-          </div>
+          <PaquetesEditor packages={packages} setPackages={setPackages} />
         </Card>
       )}
 
