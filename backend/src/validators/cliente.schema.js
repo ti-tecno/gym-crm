@@ -58,7 +58,9 @@ export const clienteCreateSchema = z.object({
     beneficios: z.array(z.string().trim().max(60)).max(8).optional(),
     aceptoResponsiva: z.boolean(),
   }).optional(),
-  }),
+  // Opcional: el alta desde recepción (Registro Autónomo) no captura el cuestionario de
+  // inscripción; el cliente lo completa después en su portal (PUT /cliente/perfil).
+  }).optional(),
   estado: estadoEnum.default('Activo'),
 });
 
