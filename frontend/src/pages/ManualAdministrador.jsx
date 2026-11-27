@@ -149,7 +149,7 @@ const ADMIN_ITEMS = [
   },
   {
     icon: '⚙',
-    title: 'Backoffice de Contenido',
+    title: 'Backoffice',
     tag: '/admin/contenido',
     badge: ADMIN_BADGE,
     dek: 'Edita lo que ve el público en la landing page, controla la mensajería por WhatsApp y configura Mercado Pago.',
@@ -176,7 +176,7 @@ const ROLE_ROWS = [
   ['Clientes & Pagos', true, true, true],
   ['Rutinas Coach / Rutinas Clientes', true, true, false],
   ['Inventario, Nómina, Gastos, Ingresos, Créditos', true, false, false],
-  ['Backoffice de Contenido', true, false, false],
+  ['Backoffice', true, false, false],
 ];
 
 export default function ManualAdministrador() {
