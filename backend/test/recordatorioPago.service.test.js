@@ -60,10 +60,10 @@ function repoEnMemoria() {
   };
 }
 
-function armar({ activo = true, respuestas = () => [201, { message: { id: `m-${Math.random()}`, status: 'sent' } }] } = {}) {
+function armar({ activo = true, automatico = true, respuestas = () => [201, { message: { id: `m-${Math.random()}`, status: 'sent' } }] } = {}) {
   const repo = repoEnMemoria();
   const enviados = [];
-  const interruptor = { activo };
+  const interruptor = { activo, automatico };
   const servicio = crearServicioRecordatorioPago({
     config,
     mensajero: {
@@ -76,12 +76,24 @@ function armar({ activo = true, respuestas = () => [201, { message: { id: `m-${M
     repo,
     clientes: { listClientes: async () => CLIENTES, getCliente: async (cid) => CLIENTES.find((c) => c.clienteId === cid) || null },
     pagos: { listPagos: async ({ clienteId }) => PAGOS[clienteId] || [] },
-    settings: { getMensajeria: async () => ({ activo: interruptor.activo }) },
+    settings: { getMensajeria: async () => ({ activo: interruptor.activo, automatico: interruptor.automatico }) },
     logger: { warn() {}, info() {}, error() {} },
     now: () => AHORA,
   });
   return { servicio, repo, enviados, interruptor };
 }
+
+test('solo manual (automático apagado): la corrida diaria no envía, el envío manual sí', async () => {
+  const { servicio, enviados } = armar({ activo: true, automatico: false });
+  const r = await servicio.correrDia();
+  assert.equal(r.omitida, 'solo_manual');
+  assert.equal(enviados.length, 0);
+  const cliente = CLIENTES.find((c) => c.telefono && Number(c.monto) > 0 && c.vencimiento);
+  const m = await servicio.enviarManual(cliente.clienteId, 'admin@prueba');
+  assert.equal(m.ok, true);
+  assert.equal(enviados.length, 1);
+  assert.equal((await servicio.listado()).config.automatico, false);
+});
 
 test('apagado (valor por defecto): la corrida no envía ni registra nada', async () => {
   const { servicio, repo, enviados } = armar({ activo: false });

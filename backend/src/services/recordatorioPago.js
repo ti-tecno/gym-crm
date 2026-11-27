@@ -52,8 +52,8 @@ export function iniciarTareaRecordatorioPago() {
     try {
       const r = await recordatorioPago.correrDia();
       // Apagado: no se marca el día; si el admin lo enciende hoy, corre en el siguiente minuto.
-      if (r.omitida === 'apagado' || r.omitida === 'en_curso') return;
-      if (r.detenida === 'apagado') return;
+      if (r.omitida === 'apagado' || r.omitida === 'solo_manual' || r.omitida === 'en_curso') return;
+      if (r.detenida === 'apagado' || r.detenida === 'solo_manual') return;
       if (r.detenida) {
         noAntesDe = Date.now() + REINTENTO_MS;
         logger.warn('[recordatorio-pago] Corrida detenida; se reintenta en una hora', r);
@@ -69,6 +69,6 @@ export function iniciarTareaRecordatorioPago() {
 
   const timer = setInterval(() => { tick().catch(() => {}); }, TICK_MS);
   timer.unref();
-  logger.info(`[recordatorio-pago] Tarea diaria lista: ${String(config.hora.h).padStart(2, '0')}:${String(config.hora.m).padStart(2, '0')} (America/Mexico_City), etapas ${config.etapas.join(',')}. El envío se enciende en Backoffice → Mensajería.`);
+  logger.info(`[recordatorio-pago] Tarea diaria lista: ${String(config.hora.h).padStart(2, '0')}:${String(config.hora.m).padStart(2, '0')} (America/Mexico_City), etapas ${config.etapas.join(',')}. El envío y el envío automático se encienden en Backoffice → Mensajería.`);
   return () => clearInterval(timer);
 }
